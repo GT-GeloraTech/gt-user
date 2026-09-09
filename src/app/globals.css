@@ -1,8 +1,16 @@
+@import "tailwindcss";
+
 html,
 body {
 	min-height: 100%;
 }
 
 body {
-	background: url("/asset/bg.png") center / cover no-repeat fixed;
+	background: linear-gradient(
+		117.25deg,
+		#0b0916 20.9%,
+		rgba(25, 13, 70, 0.8) 48.45%,
+		#0a0815 77.43%
+	);
+	background-color: #0b0916;
 }
