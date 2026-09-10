@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import Header from "@/app/components/Header";
 
@@ -73,71 +74,120 @@ const CARDS_DATA = [
   },
 ];
 
+const PROCESS_STEPS = [
+  {
+    step: "01",
+    title: "DISCOVER",
+    desc: "Understand before we build.\nGoals, users & opportunities.",
+    image: "/asset/ChatgptImg.png",
+    alt: "Abstract purple orbit representing product discovery",
+    borderClass: "step-border-discover",
+  },
+  {
+    step: "02",
+    title: "DESIGN",
+    desc: "Shape ideas into experiences.\nSimple, useful & intuitive.",
+    image: "/asset/ChatgptImg2.png",
+    alt: "Design interface with pen tool and glowing shapes",
+    borderClass: "step-border-design",
+  },
+  {
+    step: "03",
+    title: "DEVELOP",
+    desc: "Turn concepts into robust, scalable software.\nEngineered for performance & growth.",
+    image: "/asset/photoroomImg.png",
+    alt: "Code editor and gears representing software development",
+    borderClass: "step-border-develop",
+  },
+  {
+    step: "04",
+    title: "LAUNCH",
+    desc: "Deploy with confidence and accelerate.\nContinuous optimization & scale.",
+    image: "/asset/photoroomImg2.png",
+    alt: "Rocket launch representing product release",
+    borderClass: "step-border-launch",
+  },
+];
+
 export default function HomePage() {
+  const processContainerRef = useRef<HTMLDivElement>(null);
+  const [activeStepIndex, setActiveStepIndex] = useState<number>(0);
+  const touchStartX = useRef<number | null>(null);
+  const totalSteps = PROCESS_STEPS.length;
+
+  useEffect(() => {
+    let ticking = false;
+
+    const handleScroll = () => {
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          if (processContainerRef.current) {
+            const rect = processContainerRef.current.getBoundingClientRect();
+            const containerHeight = processContainerRef.current.offsetHeight;
+            const windowHeight = window.innerHeight;
+            const totalDist = containerHeight - windowHeight;
+
+            if (totalDist > 0) {
+              const scrolled = -rect.top;
+              const progress = Math.min(Math.max(scrolled / totalDist, 0), 1);
+              const stepIdx = Math.min(
+                Math.floor(progress * totalSteps),
+                totalSteps - 1
+              );
+              setActiveStepIndex(stepIdx);
+            }
+          }
+          ticking = false;
+        });
+        ticking = true;
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    window.addEventListener("resize", handleScroll, { passive: true });
+    handleScroll();
+
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("resize", handleScroll);
+    };
+  }, [totalSteps]);
+
+  const scrollToStep = (index: number) => {
+    if (!processContainerRef.current) return;
+    const container = processContainerRef.current;
+    const containerTop = container.getBoundingClientRect().top + window.scrollY;
+    const totalDist = container.offsetHeight - window.innerHeight;
+    const targetY = containerTop + (totalDist * (index / (totalSteps - 1)));
+    window.scrollTo({ top: targetY, behavior: "smooth" });
+    setActiveStepIndex(index);
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX.current === null) return;
+    const diffX = touchStartX.current - e.changedTouches[0].clientX;
+    if (diffX > 40 && activeStepIndex < totalSteps - 1) {
+      scrollToStep(activeStepIndex + 1);
+    } else if (diffX < -40 && activeStepIndex > 0) {
+      scrollToStep(activeStepIndex - 1);
+    }
+    touchStartX.current = null;
+  };
+
   return (
     <main
       style={{
-        position: "relative",
-        width: "100vw",
         minHeight: "100vh",
         overflowX: "hidden",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "flex-start",
-        backgroundImage: "url('/asset/bg.png')",
-        backgroundPosition: "top center",
-        backgroundSize: "cover",
-        backgroundAttachment: "fixed",
-        paddingTop: "24px",
+        background: "#f1ecff",
       }}
     >
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Orbitron:wght@400;700&display=swap');
-
-        /* ─── Hero Headline (Exact Figma Spec) ─── */
-        .hero-title-container {
-          position: absolute;
-          width: 800px;
-          left: calc(50% - 800px/2 + 4px);
-          top: 208px;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          text-align: center;
-          z-index: 10;
-          pointer-events: none;
-          user-select: none;
-        }
-
-        .title-line-1 {
-          font-family: 'Inter', sans-serif;
-          font-style: normal;
-          font-weight: 700;
-          font-size: 100px;
-          line-height: 82px;
-          color: #F4F1FF;
-          text-shadow: none;
-          white-space: nowrap;
-        }
-
-        .title-line-2 {
-          font-family: 'Inter', sans-serif;
-          font-style: normal;
-          font-weight: 700;
-          font-size: 100px;
-          line-height: 82px;
-          margin-top: 18px;
-          background: linear-gradient(90deg, #F4F1FF 6.25%, #B29DFF 19.71%, #7049FF 88.94%);
-          -webkit-background-clip: text;
-          background-clip: text;
-          -webkit-text-fill-color: transparent;
-          white-space: nowrap;
-        }
-
-        .title-growth {
-          color: inherit;
-        }
 
         /* ─── Glassmorphism Fan Cards with Edge-Bleed ─── */
         .home-glass-card {
@@ -273,10 +323,48 @@ export default function HomePage() {
         }
 
         .home-hero {
+          box-sizing: border-box;
           position: relative;
           width: 100%;
-          height: clamp(700px, 50vw, 740px);
-          flex: 0 0 clamp(700px, 50vw, 740px);
+          height: 760px;
+          padding-top: clamp(10px, 1.5vw, 18px);
+          overflow: hidden;
+          background: #0b0916 url('/asset/bg.png') top center / cover no-repeat;
+        }
+
+        .hero-title-container {
+          position: absolute;
+          top: 208px;
+          left: 50%;
+          z-index: 10;
+          display: flex;
+          width: min(800px, 90vw);
+          flex-direction: column;
+          align-items: center;
+          transform: translateX(-50%);
+          text-align: center;
+          pointer-events: none;
+          user-select: none;
+        }
+
+        .title-line-1,
+        .title-line-2 {
+          font-family: 'Inter', sans-serif;
+          font-size: clamp(46px, 6.95vw, 100px);
+          font-weight: 700;
+          line-height: 0.82;
+          white-space: nowrap;
+        }
+
+        .title-line-1 { color: #f4f1ff; }
+
+        .title-line-2 {
+          margin-top: 18px;
+          background: linear-gradient(90deg, #f4f1ff 6.25%, #b29dff 19.71%, #7049ff 88.94%);
+          background-clip: text;
+          color: transparent;
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
         }
 
         .trusted-strip {
@@ -286,7 +374,7 @@ export default function HomePage() {
           min-height: 110px;
           padding: 7px 0 26px;
           overflow: hidden;
-          background: transparent;
+          background: #ffffff;
           border-bottom: 0.8px solid rgba(94, 75, 142, 0.06);
           color: #8c76cd;
         }
@@ -296,28 +384,34 @@ export default function HomePage() {
           margin: 0 auto 19px;
           color: rgba(116, 87, 188, 0.8);
           font-family: 'Inter', sans-serif;
-          font-size: 11px;
-          font-weight: 500;
+          font-size: 9.5px;
+          font-weight: 600;
           letter-spacing: 1.1px;
           line-height: 16px;
           text-align: center;
           text-transform: uppercase;
+          padding-top: 8px;
         }
 
         .trusted-track {
           display: flex;
           width: max-content;
           min-width: 100%;
+          flex-shrink: 0;
           align-items: center;
           gap: 0;
-          animation: trusted-scroll 28s linear infinite;
+          animation: trusted-scroll 18s linear infinite;
+          animation-play-state: running;
+          transform: translate3d(0, 0, 0);
+          will-change: transform;
         }
 
         .trusted-group {
+          flex: 0 0 auto;
           display: flex;
           align-items: center;
           gap: 52px;
-          padding: 0 36px;
+          padding: 0 8px;
           white-space: nowrap;
         }
 
@@ -327,7 +421,7 @@ export default function HomePage() {
           gap: 14px;
           color: #8c76cd;
           font-family: 'Space Grotesk', 'Inter', sans-serif;
-          font-size: 18px;
+          font-size: 13px;
           font-weight: 600;
           line-height: 22px;
         }
@@ -343,7 +437,7 @@ export default function HomePage() {
 
         @keyframes trusted-scroll {
           from { transform: translateX(0); }
-          to { transform: translateX(-50%); }
+          to { transform: translateX(-25%); }
         }
 
         .about-section {
@@ -355,38 +449,33 @@ export default function HomePage() {
           flex-direction: column;
           align-items: center;
           min-height: 760px;
-          padding: 44px 4vw 80px;
+          padding: 28px 4vw 80px;
           overflow: hidden;
           background: transparent;
           color: #141415;
         }
 
         .about-eyebrow {
+          box-sizing: border-box;
           position: relative;
           z-index: 1;
-          width: fit-content;
+          display: flex;
+          width: 219px;
+          height: 53px;
           margin: 0 auto;
-          padding: 13px 24px;
-          border: 1px solid rgba(218, 207, 255, 0.35);
-          border-radius: 999px;
-          background: rgba(107, 78, 196, 0.22);
-          box-shadow: 0 8px 24px rgba(62, 40, 142, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.18);
-          color: #f4f1ff;
+          align-items: center;
+          justify-content: center;
+          padding: 0;
+          border: 0;
+          border-radius: 37px;
+          background: linear-gradient(90deg, rgba(90, 40, 246, 0) 0%, rgba(241, 236, 255, 0.58) 100%);
+          color: #5a28f6;
           font-family: 'Inter', sans-serif;
           font-size: 13px;
-          font-weight: 500;
-          letter-spacing: 0.01em;
+          font-weight: 400;
+          letter-spacing: 0;
           line-height: 18px;
-          text-shadow: 0 1px 8px rgba(43, 24, 110, 0.8);
-          backdrop-filter: blur(18px);
-          -webkit-backdrop-filter: blur(18px);
-          transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
-        }
-
-        .about-eyebrow:hover {
-          border-color: rgba(230, 223, 255, 0.65);
-          background: rgba(125, 94, 222, 0.32);
-          transform: translateY(-2px);
+          text-shadow: none;
         }
 
         .about-heading {
@@ -400,7 +489,7 @@ export default function HomePage() {
           letter-spacing: 0;
           line-height: 1.08;
           text-align: center;
-          color: #f4f1ff;
+          color: #141415;
         }
 
         .about-heading-accent { color: #5a28f6; }
@@ -477,7 +566,7 @@ export default function HomePage() {
 
         /* Future-Ready: align 100% and Future-Ready exactly with baked-in text */
         .about-future .tile-content {
-          padding: 28px 0 0 8.13%;
+          padding: 38px 0 0 8.13%;
         }
 
         .about-future .about-percent {
@@ -485,7 +574,7 @@ export default function HomePage() {
           font-family: 'Inter', sans-serif;
           font-size: 20px;
           font-weight: 700;
-          line-height: 1.2;
+          line-height: 1.4;
           color: #141415;
           margin: 0 0 6px 0;
         }
@@ -501,7 +590,7 @@ export default function HomePage() {
 
         /* Engineers tile content */
         .about-engineers .tile-content {
-          padding: 26px 30px;
+          padding: 36px 32px;
           justify-content: flex-start;
         }
 
@@ -510,7 +599,7 @@ export default function HomePage() {
           font-family: 'Inter', sans-serif;
           font-size: 20px;
           font-weight: 700;
-          line-height: 1.25;
+          line-height: 1.38;
           color: #ffffff;
         }
 
@@ -522,8 +611,302 @@ export default function HomePage() {
           color: rgba(255, 255, 255, 0.88);
         }
 
+        /* ─── Modern Process Section ("How We Work") ─── */
+        .process-scroll-container {
+          position: relative;
+          height: 380vh;
+          background: #080512;
+        }
+
+        .process-sticky-stage {
+          position: sticky;
+          top: 0;
+          height: 100vh;
+          width: 100%;
+          overflow: hidden;
+          display: flex;
+          align-items: center;
+          background: radial-gradient(circle at 50% 30%, #1c103a 0%, #0c0818 55%, #070510 100%);
+          color: #ffffff;
+          isolation: isolate;
+
+          --card-w: clamp(330px, 26.5vw, 395px);
+          --card-h: clamp(470px, 59vh, 525px);
+          --intro-left: clamp(36px, 6.8vw, 92px);
+          --intro-w: clamp(280px, 22.5vw, 335px);
+        }
+
+        .process-glow-bg {
+          position: absolute;
+          inset: 0;
+          pointer-events: none;
+          background:
+            radial-gradient(850px circle at 62% 32%, rgba(147, 102, 255, 0.16), transparent 70%),
+            radial-gradient(650px circle at 26% 68%, rgba(79, 70, 229, 0.12), transparent 60%);
+          z-index: 1;
+        }
+
+        .process-intro {
+          position: absolute;
+          left: var(--intro-left);
+          top: clamp(80px, 15vh, 150px);
+          width: var(--intro-w);
+          z-index: 10;
+          transition: opacity 0.65s cubic-bezier(0.16, 1, 0.3, 1), transform 0.65s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .process-intro.is-hidden {
+          opacity: 0;
+          transform: translateX(-45px);
+          pointer-events: none;
+        }
+
+        .process-kicker {
+          margin: 0 0 20px 0;
+          color: #9d8ec7;
+          font-family: 'Inter', sans-serif;
+          font-size: 15px;
+          font-weight: 500;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+        }
+
+        .process-title {
+          margin: 0;
+          font-family: 'Inter', sans-serif;
+          font-size: clamp(38px, 3.6vw, 48px);
+          font-style: italic;
+          font-weight: 400;
+          letter-spacing: 0.04em;
+          line-height: 1.15;
+          color: #ffffff;
+        }
+
+        .process-title-accent {
+          color: #aa97ea;
+          text-shadow: 0 0 20px rgba(170, 151, 234, 0.3);
+        }
+
+        .process-description {
+          margin: 36px 0 0 0;
+          font-family: 'Inter', sans-serif;
+          font-size: 16px;
+          font-weight: 400;
+          line-height: 1.62;
+          color: #cfc5eb;
+          max-width: 320px;
+        }
+
+        .process-number-wrap {
+          position: absolute;
+          left: var(--intro-left);
+          bottom: clamp(16px, 4vh, 38px);
+          height: clamp(120px, 16vw, 190px);
+          width: clamp(180px, 20vw, 260px);
+          z-index: 10;
+          pointer-events: none;
+        }
+
+        .process-number {
+          position: absolute;
+          left: 0;
+          bottom: 0;
+          margin: 0;
+          font-family: 'Inter', sans-serif;
+          font-size: clamp(140px, 16vw, 210px);
+          font-weight: 700;
+          letter-spacing: -0.05em;
+          line-height: 0.82;
+          color: #dfd7ff;
+          transition: opacity 0.55s cubic-bezier(0.16, 1, 0.3, 1), transform 0.55s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .process-number.is-active {
+          opacity: 1;
+          transform: translateY(0);
+        }
+
+        .process-number.is-hidden-up {
+          opacity: 0;
+          transform: translateY(-40px);
+        }
+
+        .process-number.is-hidden-down {
+          opacity: 0;
+          transform: translateY(40px);
+        }
+
+        /* Right Rectangle Peek (exact match to target Image 2) */
+        .process-card-peek-right {
+          position: absolute;
+          top: 50%;
+          right: clamp(-180px, -8vw, -100px);
+          transform: translateY(-50%);
+          width: var(--card-w);
+          height: var(--card-h);
+          border-radius: 24px;
+          border: 1.2px solid rgba(255, 255, 255, 0.14);
+          background: linear-gradient(135deg, rgba(26, 18, 54, 0.3) 0%, rgba(16, 11, 35, 0.4) 100%);
+          backdrop-filter: blur(10px);
+          -webkit-backdrop-filter: blur(10px);
+          opacity: 0.28;
+          pointer-events: none;
+          z-index: 2;
+          box-sizing: border-box;
+        }
+
+        /* Left Rectangle Peek (shown on step 2, 3, 4) */
+        .process-card-peek-left {
+          position: absolute;
+          top: 50%;
+          left: clamp(-180px, -8vw, -100px);
+          transform: translateY(-50%);
+          width: var(--card-w);
+          height: var(--card-h);
+          border-radius: 24px;
+          border: 1.2px solid rgba(255, 255, 255, 0.14);
+          background: linear-gradient(135deg, rgba(26, 18, 54, 0.3) 0%, rgba(16, 11, 35, 0.4) 100%);
+          backdrop-filter: blur(10px);
+          -webkit-backdrop-filter: blur(10px);
+          pointer-events: none;
+          z-index: 2;
+          box-sizing: border-box;
+          transition: opacity 0.5s ease;
+        }
+
+        .process-cards-stage {
+          position: absolute;
+          inset: 0;
+          z-index: 5;
+          pointer-events: none;
+        }
+
+        /* Center-aligned card with smooth stacked scroll transitions */
+        .process-card {
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          width: var(--card-w);
+          height: var(--card-h);
+          border-radius: 24px;
+          box-sizing: border-box;
+          overflow: hidden;
+          background: linear-gradient(135deg, rgba(26, 18, 54, 0.82) 0%, rgba(16, 11, 35, 0.92) 100%);
+          backdrop-filter: blur(20px);
+          -webkit-backdrop-filter: blur(20px);
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+          transition: transform 0.68s cubic-bezier(0.16, 1, 0.3, 1),
+                      opacity 0.58s cubic-bezier(0.16, 1, 0.3, 1),
+                      visibility 0.58s;
+          user-select: none;
+          pointer-events: auto;
+        }
+
+        .process-card.is-active {
+          opacity: 1;
+          visibility: visible;
+          transform: translate(-50%, -50%) scale(1);
+          z-index: 10;
+          pointer-events: auto;
+        }
+
+        .process-card.is-passed {
+          opacity: 0;
+          visibility: hidden;
+          transform: translate(-50%, calc(-50% - 32px)) scale(0.95);
+          z-index: 5;
+          pointer-events: none;
+        }
+
+        .process-card.is-incoming {
+          opacity: 0;
+          visibility: hidden;
+          transform: translate(-50%, calc(-50% + 44px)) scale(1.02);
+          z-index: 1;
+          pointer-events: none;
+        }
+
+        /* Glow border styles for the steps */
+        .step-border-discover {
+          border: 1.5px solid rgba(139, 92, 246, 0.45);
+          box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6), inset 0 0 24px rgba(139, 92, 246, 0.08);
+        }
+
+        .step-border-design {
+          border: 2px solid #2874ff;
+          box-shadow: 0 0 34px rgba(40, 116, 255, 0.55), 0 24px 60px rgba(0, 0, 0, 0.6), inset 0 0 18px rgba(40, 116, 255, 0.16);
+        }
+
+        .step-border-develop {
+          border: 2px solid #8b5cf6;
+          box-shadow: 0 0 34px rgba(139, 92, 246, 0.55), 0 24px 60px rgba(0, 0, 0, 0.6), inset 0 0 18px rgba(139, 92, 246, 0.16);
+        }
+
+        .step-border-launch {
+          border: 2px solid #a855f7;
+          box-shadow: 0 0 34px rgba(168, 85, 247, 0.55), 0 24px 60px rgba(0, 0, 0, 0.6), inset 0 0 18px rgba(168, 85, 247, 0.16);
+        }
+
+        .process-card-image-wrap {
+          width: 100%;
+          height: 56%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 24px 20px 0;
+          box-sizing: border-box;
+          position: relative;
+        }
+
+        .process-card-image {
+          max-width: 86%;
+          max-height: 86%;
+          width: auto;
+          height: auto;
+          object-fit: contain;
+          filter: drop-shadow(0 12px 24px rgba(0, 0, 0, 0.35));
+        }
+
+        .process-card-content {
+          padding: 16px 32px 36px;
+          box-sizing: border-box;
+        }
+
+        .process-card-content h3 {
+          margin: 0 0 12px 0;
+          font-family: 'Inter', sans-serif;
+          font-size: 24px;
+          font-weight: 700;
+          letter-spacing: 0.04em;
+          color: #ffffff;
+        }
+
+        .process-card-content p {
+          margin: 0;
+          font-family: 'Inter', sans-serif;
+          font-size: 14.5px;
+          line-height: 1.55;
+          color: #cfc5eb;
+        }
+
+        @media (max-width: 1080px) {
+          .process-sticky-stage {
+            --card-w: clamp(290px, 34vw, 350px);
+            --card-h: clamp(450px, 56vh, 490px);
+            --card-gap: 24px;
+            --intro-left: 28px;
+            --intro-w: 260px;
+            --intro-gap: 32px;
+          }
+          .process-number {
+            font-size: clamp(110px, 13vw, 150px);
+          }
+        }
+
         @media (max-width: 860px) {
-          .home-hero { height: 760px; flex-basis: 760px; }
+          .home-hero { height: 680px; }
           .trusted-strip { min-height: 92px; padding-bottom: 27px; }
           .trusted-label { margin-bottom: 14px; font-size: 9px; }
           .trusted-group { gap: 28px; padding: 0 20px; }
@@ -549,16 +932,65 @@ export default function HomePage() {
             flex: auto;
           }
           .about-future .tile-content { padding: 24px; }
-          .about-engineers .tile-content { padding: 24px; }
+          /* Process section mobile responsive */
+          .process-scroll-container {
+            height: 320vh;
+          }
+          .process-sticky-stage {
+            --card-w: min(340px, 86vw);
+            --card-h: min(475px, 58vh);
+            --intro-left: 20px;
+          }
+          .process-intro {
+            top: 28px;
+            left: 20px;
+            right: 20px;
+            width: auto;
+          }
+          .process-intro.is-hidden {
+            opacity: 0;
+            transform: translateY(-20px);
+            pointer-events: none;
+          }
+          .process-kicker {
+            margin-bottom: 8px;
+            font-size: 13px;
+          }
+          .process-title {
+            font-size: clamp(26px, 7vw, 32px);
+          }
+          .process-description {
+            margin-top: 8px;
+            font-size: 13.5px;
+            max-width: 100%;
+          }
+          .process-card {
+            top: 52%;
+          }
+          .process-card-peek-right,
+          .process-card-peek-left {
+            display: none;
+          }
+          .process-number-wrap {
+            bottom: 14px;
+            left: 20px;
+            height: 85px;
+            width: 140px;
+          }
+          .process-number {
+            font-size: 88px;
+          }
         }
 
-        @media (prefers-reduced-motion: reduce) {
-          .trusted-track { animation: none; }
+        @media (max-width: 560px) {
+          .hero-title-container { top: 180px; }
+          .title-line-1,
+          .title-line-2 { font-size: clamp(32px, 10vw, 54px); }
         }
+
       `}</style>
 
       <section className="home-hero" aria-label="Gelora Tech hero">
-        {/* Top Header - Full Width */}
         <Header activeTab="Home" />
 
         {/* Canvas Container for Background & Cards */}
@@ -611,8 +1043,8 @@ export default function HomePage() {
       <section className="trusted-strip" aria-label="Trusted by growing companies">
         <span className="trusted-label">Trusted by growing companies</span>
         <div className="trusted-track">
-          {[0, 1].map((group) => (
-            <div className="trusted-group" key={group} aria-hidden={group === 1}>
+          {[0, 1, 2, 3].map((group) => (
+            <div className="trusted-group" key={group} aria-hidden={group !== 0}>
               {['ScootyonRent', 'BellyBento', 'Brajmarg', 'Chopdi', 'Ticketing Solution', 'Raibar', 'RSG'].map((company) => (
                 <span className="trusted-company" key={`${group}-${company}`}>{company}</span>
               ))}
@@ -668,6 +1100,106 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      <div
+        ref={processContainerRef}
+        className={`process-scroll-container step-${activeStepIndex + 1}`}
+        aria-label="How we work process"
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+      >
+        <div className="process-sticky-stage">
+          {/* Subtle atmospheric ambient glow */}
+          <div className="process-glow-bg" />
+
+          {/* Left Intro Text (visible in Step 1, smoothly hidden in later steps) */}
+          <div className={`process-intro ${activeStepIndex > 0 ? "is-hidden" : ""}`}>
+            <p className="process-kicker">HOW WE WORK</p>
+            <h2 id="process-heading" className="process-title">
+              From idea<br />
+              to <span className="process-title-accent">impact.</span>
+            </h2>
+            <p className="process-description">
+              A thoughtful process that turns your vision into scalable digital experiences built for growth
+            </p>
+          </div>
+
+          {/* Left Rectangle Peek (visible on subsequent steps) */}
+          <div
+            className="process-card-peek-left"
+            style={{ opacity: activeStepIndex > 0 ? 0.28 : 0 }}
+            aria-hidden="true"
+          />
+
+          {/* Right Rectangle Peek (exact match to target Image 2) */}
+          <div
+            className="process-card-peek-right"
+            aria-hidden="true"
+          />
+
+          {/* Giant Number Indicator at Bottom-Left */}
+          <div className="process-number-wrap">
+            {PROCESS_STEPS.map((s, idx) => (
+              <span
+                key={s.step}
+                className={`process-number ${
+                  idx === activeStepIndex
+                    ? "is-active"
+                    : idx < activeStepIndex
+                    ? "is-hidden-up"
+                    : "is-hidden-down"
+                }`}
+                aria-hidden={idx !== activeStepIndex}
+              >
+                {s.step}
+              </span>
+            ))}
+          </div>
+
+          {/* Centered Stacking Cards Stage */}
+          <div className="process-cards-stage">
+            {PROCESS_STEPS.map((step, idx) => (
+              <article
+                key={step.step}
+                className={`process-card ${step.borderClass} ${
+                  idx === activeStepIndex
+                    ? "is-active"
+                    : idx < activeStepIndex
+                    ? "is-passed"
+                    : "is-incoming"
+                }`}
+                onClick={() => scrollToStep(idx)}
+                role="button"
+                tabIndex={0}
+                aria-label={`Step ${step.step}: ${step.title}`}
+                aria-hidden={idx !== activeStepIndex}
+              >
+                <div className="process-card-image-wrap">
+                  <Image
+                    className="process-card-image"
+                    src={step.image}
+                    alt={step.alt}
+                    width={340}
+                    height={340}
+                    priority={idx === 0}
+                  />
+                </div>
+                <div className="process-card-content">
+                  <h3>{step.title}</h3>
+                  <p>
+                    {step.desc.split("\n").map((line, lineIdx) => (
+                      <span key={lineIdx}>
+                        {line}
+                        {lineIdx < step.desc.split("\n").length - 1 && <br />}
+                      </span>
+                    ))}
+                  </p>
+                </div>
+              </article>
+            ))}
+          </div>
+        </div>
+      </div>
     </main>
   );
 }
