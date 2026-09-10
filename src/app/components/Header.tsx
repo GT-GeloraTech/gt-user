@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 interface HeaderProps {
   activeTab?: string;
@@ -12,19 +12,32 @@ interface HeaderProps {
 
 const NAV_ITEMS = [
   { name: "Home", href: "/" },
-  { name: "Services", href: "/pages/Services" },
-  { name: "About", href: "/pages/About" },
-  { name: "Careers", href: "/pages/Careers" },
+  { name: "Services", href: "/services" },
+  { name: "About", href: "/about" },
+  { name: "Careers", href: "/careers" },
 ];
+
+const PAGE_TITLES: Record<string, string> = {
+  "/": "Home | Gelora Tech",
+  "/services": "Services | Gelora Tech",
+  "/about": "About | Gelora Tech",
+  "/careers": "Careers | Gelora Tech",
+};
 
 export default function Header({ activeTab, onTabChange }: HeaderProps) {
   const pathname = usePathname();
   const [selected, setSelected] = useState(activeTab || "Home");
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-  const currentTab = activeTab || selected;
+  const currentTab = NAV_ITEMS.find((item) => item.href === pathname)?.name || activeTab || selected;
+
+  useEffect(() => {
+    document.title = PAGE_TITLES[pathname] || "Gelora Tech";
+  }, [pathname]);
 
   const handleNavClick = (name: string) => {
     setSelected(name);
+    setIsMenuOpen(false);
     if (onTabChange) onTabChange(name);
   };
 
@@ -35,11 +48,12 @@ export default function Header({ activeTab, onTabChange }: HeaderProps) {
         width: "100%",
         maxWidth: "1440px",
         boxSizing: "border-box",
-        height: "64px",
+        minHeight: "64px",
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
-        padding: "0 50px",
+        gap: "24px",
+        padding: "0 clamp(20px, 4vw, 50px)",
         zIndex: 50,
       }}
     >
@@ -52,9 +66,11 @@ export default function Header({ activeTab, onTabChange }: HeaderProps) {
           gap: 12px;
           text-decoration: none;
           user-select: none;
+          flex-shrink: 0;
         }
 
         .hdr-logo-glow {
+          height: auto;
           object-fit: contain;
           filter: drop-shadow(0 0 10px rgba(116, 79, 231, 0.9)) drop-shadow(0 0 20px rgba(145, 200, 230, 0.5));
           transition: transform 0.3s ease, filter 0.3s ease;
@@ -64,29 +80,19 @@ export default function Header({ activeTab, onTabChange }: HeaderProps) {
           filter: drop-shadow(0 0 14px rgba(116, 79, 231, 1)) drop-shadow(0 0 28px rgba(145, 200, 230, 0.75));
         }
 
-        .hdr-title-txt {
-          font-family: 'Inter', sans-serif;
-          font-size: 18px;
-          font-weight: 700;
-          letter-spacing: 0.28em;
-          color: #ffffff;
-          line-height: 1;
-        }
-
-        .hdr-sub-txt {
-          font-family: 'Orbitron', sans-serif;
-          font-size: 8px;
-          letter-spacing: 0.7em;
-          color: rgba(191, 239, 255, 0.95);
-          margin-top: 4px;
-          text-shadow: 0 0 8px rgba(191, 239, 255, 0.8);
+        .hdr-brand-text {
+          width: 124px;
+          height: auto;
+          margin-left: 12px;
+          object-fit: contain;
+          filter: drop-shadow(0 0 8px rgba(191, 239, 255, 0.35));
         }
 
         /* ─── Frame 2: Navbar Outer Pill ─── */
         .hdr-nav-pill {
           position: relative;
           box-sizing: border-box;
-          width: 470px;
+          width: min(470px, 42vw);
           height: 48px;
           background: rgba(255, 255, 255, 0.1);
           border-radius: 355.245px;
@@ -185,6 +191,41 @@ export default function Header({ activeTab, onTabChange }: HeaderProps) {
           background: rgba(235, 235, 235, 0.2);
           transform: rotate(45deg);
         }
+
+        .hdr-menu-toggle {
+          display: none;
+          width: 42px;
+          height: 42px;
+          border: 1px solid rgba(255, 255, 255, 0.18);
+          border-radius: 50%;
+          background: rgba(255, 255, 255, 0.08);
+          color: #fff;
+          cursor: pointer;
+        }
+
+        @media (max-width: 760px) {
+          .hdr-menu-toggle { display: grid; place-items: center; }
+          .hdr-nav-pill {
+            position: absolute;
+            top: calc(100% + 12px);
+            right: 20px;
+            width: min(260px, calc(100vw - 40px));
+            height: auto;
+            padding: 8px;
+            display: ${isMenuOpen ? "flex" : "none"};
+            flex-direction: column;
+            align-items: stretch;
+            background: rgba(24, 18, 48, 0.96);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+          }
+          .hdr-nav-item, .hdr-nav-item.active { width: auto; }
+          .hdr-talk-cta { display: none; }
+        }
+
+        @media (max-width: 420px) {
+          .hdr-brand-text { width: 108px; margin-left: 8px; }
+          .hdr-logo-glow { width: 30px; height: 30px; }
+        }
       `}</style>
 
       {/* Brand Logo & Name */}
@@ -197,10 +238,7 @@ export default function Header({ activeTab, onTabChange }: HeaderProps) {
           priority
           className="hdr-logo-glow"
         />
-        <div style={{ display: "flex", flexDirection: "column" }}>
-          <span className="hdr-title-txt">GELORA</span>
-          <span className="hdr-sub-txt">— TECH —</span>
-        </div>
+        <Image src="/asset/gtText.png" alt="Gelora Tech" width={124} height={42} className="hdr-brand-text" />
       </Link>
 
       {/* Frame 2 Nav Pill */}
@@ -220,8 +258,18 @@ export default function Header({ activeTab, onTabChange }: HeaderProps) {
         })}
       </nav>
 
+      <button
+        type="button"
+        className="hdr-menu-toggle"
+        aria-label={isMenuOpen ? "Close navigation menu" : "Open navigation menu"}
+        aria-expanded={isMenuOpen}
+        onClick={() => setIsMenuOpen((open) => !open)}
+      >
+        <span aria-hidden="true">{isMenuOpen ? "X" : "="}</span>
+      </button>
+
       {/* Let's Talk Button */}
-      <Link href="/pages/About" className="hdr-talk-cta">
+      <Link href="/about" className="hdr-talk-cta">
         <span className="hdr-talk-text">Let&apos;s Talk</span>
         <div className="hdr-talk-arrow">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">

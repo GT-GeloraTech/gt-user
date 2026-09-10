@@ -6,11 +6,10 @@ body {
 }
 
 body {
-	background: linear-gradient(
-		117.25deg,
-		#0b0916 20.9%,
-		rgba(25, 13, 70, 0.8) 48.45%,
-		#0a0815 77.43%
-	);
+	overflow-x: hidden;
 	background-color: #0b0916;
+	background-image: url('/asset/bg.png');
+	background-position: top center;
+	background-size: cover;
+	background-attachment: fixed;
 }

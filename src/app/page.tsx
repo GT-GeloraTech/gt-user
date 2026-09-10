@@ -1,35 +1,32 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
+import { useState, useEffect } from "react";
 import SplashScreen from "./components/SplashScreen";
 import HomePage from "./pages/Home/page";
 
-function subscribe(callback: () => void) {
-  window.addEventListener("storage", callback);
-  return () => window.removeEventListener("storage", callback);
-}
-
-function getSnapshot() {
-  if (typeof window === "undefined") return "true";
-  return sessionStorage.getItem("gt_splash_seen") || "false";
-}
-
-function getServerSnapshot() {
-  return "true";
-}
-
 export default function Home() {
-  const splashStatus = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  // null = not yet determined (server-side), true = show splash, false = skip to home
+  const [showSplash, setShowSplash] = useState<boolean | null>(null);
 
-  const handleSplashFinish = () => {
-    if (typeof window !== "undefined") {
-      sessionStorage.setItem("gt_splash_seen", "true");
-      window.dispatchEvent(new Event("storage"));
-    }
-  };
+  useEffect(() => {
+    // Only show splash on true first load or hard refresh.
+    // sessionStorage persists within the tab session but clears on new tab/refresh.
+    const alreadyPlayed = sessionStorage.getItem("splash_done") === "1";
+    setShowSplash(!alreadyPlayed);
+  }, []);
 
-  if (splashStatus === "false") {
-    return <SplashScreen onComplete={handleSplashFinish} />;
+  // While checking (SSR / first paint), render nothing to avoid flicker
+  if (showSplash === null) return null;
+
+  if (showSplash) {
+    return (
+      <SplashScreen
+        onComplete={() => {
+          sessionStorage.setItem("splash_done", "1");
+          setShowSplash(false);
+        }}
+      />
+    );
   }
 
   return <HomePage />;
