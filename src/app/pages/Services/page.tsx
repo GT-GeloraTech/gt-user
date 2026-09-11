@@ -7,7 +7,7 @@ export default function ServicesPage() {
     <main
       style={{
         position: "relative",
-        width: "100vw",
+        width: "100%",
         minHeight: "100vh",
         backgroundImage: "url('/asset/bg.png')",
         backgroundPosition: "center",

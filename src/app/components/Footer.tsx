@@ -1,0 +1,546 @@
+"use client";
+
+import Image from "next/image";
+import Link from "next/link";
+
+interface FooterProps {
+  showCta?: boolean;
+}
+
+const PARTICLES = [
+  { left: "7.1%", top: "31.2%", w: 3.5, h: 3.5, bg: "rgba(183, 201, 224, 0.55)", op: 0.52 },
+  { left: "6.7%", top: "36.8%", w: 1.5, h: 1.5, bg: "rgba(155, 143, 192, 0.45)", op: 0.15 },
+  { left: "5.4%", top: "38.4%", w: 4.0, h: 4.0, bg: "rgba(183, 201, 224, 0.55)", op: 0.64 },
+  { left: "60.5%", top: "53.7%", w: 1.5, h: 1.5, bg: "rgba(183, 201, 224, 0.55)", op: 0.4 },
+  { left: "43.7%", top: "51.8%", w: 2.9, h: 2.9, bg: "rgba(155, 143, 192, 0.45)", op: 0.6 },
+  { left: "2.1%", top: "79.8%", w: 1.9, h: 1.9, bg: "rgba(155, 143, 192, 0.45)", op: 0.24 },
+  { left: "76.0%", top: "28.0%", w: 3.7, h: 3.7, bg: "rgba(155, 143, 192, 0.45)", op: 0.56 },
+  { left: "9.5%", top: "21.7%", w: 3.2, h: 3.2, bg: "rgba(155, 143, 192, 0.45)", op: 0.43 },
+  { left: "93.3%", top: "55.2%", w: 1.2, h: 1.2, bg: "rgba(183, 201, 224, 0.55)", op: 0.18 },
+  { left: "98.5%", top: "69.9%", w: 3.0, h: 3.0, bg: "rgba(155, 143, 192, 0.45)", op: 0.64 },
+  { left: "26.6%", top: "19.4%", w: 3.9, h: 3.9, bg: "rgba(183, 201, 224, 0.55)", op: 0.61 },
+  { left: "26.7%", top: "57.4%", w: 1.8, h: 1.8, bg: "rgba(155, 143, 192, 0.45)", op: 0.12 },
+  { left: "14.4%", top: "3.9%", w: 2.7, h: 2.7, bg: "rgba(155, 143, 192, 0.45)", op: 0.28 },
+  { left: "86.3%", top: "45.0%", w: 4.0, h: 4.0, bg: "rgba(155, 143, 192, 0.45)", op: 0.64 },
+  { left: "30.3%", top: "72.8%", w: 3.2, h: 3.2, bg: "rgba(183, 201, 224, 0.55)", op: 0.42 },
+  { left: "92.7%", top: "29.2%", w: 1.9, h: 1.9, bg: "rgba(155, 143, 192, 0.45)", op: 0.57 },
+];
+
+export default function Footer({ showCta = true }: FooterProps) {
+  return (
+    <div className="gt-bottom-section">
+      <style>{`
+        /* ─── CTA Wrapper (Rectangle 190) ─── */
+        .gt-cta-wrapper {
+          position: relative;
+          width: 100%;
+          min-height: 640px;
+          background: linear-gradient(180deg, #E9E1FF 0%, #CDC2EA 100%);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: clamp(60px, 7vw, 105px) clamp(16px, 3vw, 32px);
+          box-sizing: border-box;
+          overflow: hidden;
+        }
+
+        /* ─── CTA Card (Frame) ─── */
+        .gt-cta-card {
+          position: relative;
+          width: 100%;
+          max-width: 1070.4px;
+          min-height: 493px;
+          background: linear-gradient(135deg, #3D2D6E 0%, #5E4B8E 30%, #7B6BA5 65%, #9FC4D8 100%);
+          border-radius: 32px;
+          box-shadow: 0 24px 60px rgba(61, 45, 110, 0.28);
+          overflow: hidden;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          padding: clamp(48px, 6vw, 68px) clamp(24px, 4vw, 56px);
+          box-sizing: border-box;
+          text-align: center;
+        }
+
+        .gt-cta-circle-glow {
+          position: absolute;
+          width: 280px;
+          height: 280px;
+          right: -40px;
+          top: -70px;
+          background: rgba(255, 255, 255, 0.05);
+          border-radius: 140px;
+          pointer-events: none;
+        }
+
+        .gt-particle {
+          position: absolute;
+          border-radius: 50%;
+          pointer-events: none;
+        }
+
+        .gt-cta-badge {
+          box-sizing: border-box;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          height: 31px;
+          padding: 0 18px;
+          background: rgba(255, 255, 255, 0.13);
+          border: 0.8px solid rgba(255, 255, 255, 0.22);
+          border-radius: 100px;
+          margin-bottom: 24px;
+          user-select: none;
+        }
+        .gt-cta-badge-text {
+          font-family: 'Inter', sans-serif;
+          font-weight: 400;
+          font-size: 13px;
+          line-height: 20px;
+          color: #FFFFFF;
+        }
+
+        .gt-cta-headline {
+          margin: 0 0 18px 0;
+          font-family: 'Inter', sans-serif;
+          font-weight: 700;
+          font-size: clamp(34px, 4.4vw, 54px);
+          line-height: 1.15;
+          text-align: center;
+          color: #FFFFFF;
+          letter-spacing: -0.02em;
+        }
+
+        .gt-cta-subtext {
+          margin: 0 0 34px 0;
+          font-family: 'Inter', sans-serif;
+          font-weight: 400;
+          font-size: clamp(14.5px, 1.3vw, 17px);
+          line-height: 28px;
+          text-align: center;
+          color: rgba(255, 255, 255, 0.68);
+          max-width: 440px;
+        }
+
+        .gt-cta-btns {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 16px;
+          flex-wrap: wrap;
+        }
+
+        .gt-cta-talk-btn {
+          box-sizing: border-box;
+          height: 54px;
+          min-width: 160px;
+          padding: 4px 4px 4px 24px;
+          background: #FFFFFF;
+          box-shadow: 0px 4px 20px rgba(94, 75, 142, 0.34), inset 0px 1px 0px rgba(255, 255, 255, 0.14);
+          border-radius: 100px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 14px;
+          text-decoration: none;
+          cursor: pointer;
+          transition: transform 0.22s ease, box-shadow 0.22s ease;
+        }
+        .gt-cta-talk-btn:hover {
+          transform: translateY(-2px);
+          box-shadow: 0px 8px 26px rgba(94, 75, 142, 0.45);
+        }
+        .gt-cta-talk-text {
+          font-family: 'Inter', sans-serif;
+          font-weight: 500;
+          font-size: 15px;
+          line-height: 21px;
+          color: #744FE7;
+          white-space: nowrap;
+        }
+        .gt-cta-arrow-box {
+          width: 46px;
+          height: 46px;
+          background: #E5DCFF;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: background 0.2s ease, transform 0.2s ease;
+          flex-shrink: 0;
+        }
+        .gt-cta-talk-btn:hover .gt-cta-arrow-box {
+          background: #dacaff;
+          transform: translateX(2px);
+        }
+
+        .gt-cta-explore-btn {
+          box-sizing: border-box;
+          height: 54px;
+          min-width: 165px;
+          padding: 0 28px;
+          background: rgba(255, 255, 255, 0.1);
+          border: 0.8px solid rgba(255, 255, 255, 0.25);
+          border-radius: 100px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          text-decoration: none;
+          cursor: pointer;
+          font-family: 'Inter', sans-serif;
+          font-weight: 500;
+          font-size: 15px;
+          line-height: 22px;
+          color: #FFFFFF;
+          backdrop-filter: blur(10px);
+          -webkit-backdrop-filter: blur(10px);
+          transition: background 0.22s ease, transform 0.22s ease, border-color 0.22s ease;
+          white-space: nowrap;
+        }
+        .gt-cta-explore-btn:hover {
+          background: rgba(255, 255, 255, 0.18);
+          border-color: rgba(255, 255, 255, 0.4);
+          transform: translateY(-2px);
+        }
+
+        /* ─── Footer Root ─── */
+        .gt-footer-root {
+          position: relative;
+          width: 100%;
+          background: #080512 url('/asset/bg.png') center center / cover no-repeat;
+          overflow: hidden;
+          box-sizing: border-box;
+        }
+        .gt-footer-root::before {
+          content: '';
+          position: absolute;
+          inset: 0;
+          background: rgba(6, 3, 18, 0.68);
+          pointer-events: none;
+          z-index: 0;
+        }
+
+        /* Inner container */
+        .gt-footer-inner {
+          position: relative;
+          z-index: 2;
+          max-width: 1200px;
+          margin: 0 auto;
+          padding: 72px clamp(20px, 4vw, 48px) 0;
+          box-sizing: border-box;
+        }
+
+        /* 4 Columns Grid */
+        .gt-footer-grid {
+          display: grid;
+          grid-template-columns: 1.55fr 1fr 1.25fr 1.35fr;
+          gap: clamp(28px, 4vw, 56px);
+          padding-bottom: 52px;
+        }
+
+        .gt-footer-brand-wrap {
+          display: inline-flex;
+          align-items: center;
+          gap: 12px;
+          text-decoration: none;
+        }
+        .gt-footer-logo-img {
+          height: auto;
+          object-fit: contain;
+          filter: drop-shadow(0 0 10px rgba(116, 79, 231, 0.9));
+        }
+        .gt-footer-brand-text {
+          width: 124px;
+          height: auto;
+          margin-left: 10px;
+          object-fit: contain;
+        }
+
+        .gt-footer-brand-desc {
+          margin: 18px 0 0 0;
+          font-family: 'Inter', sans-serif;
+          font-size: 14.5px;
+          line-height: 1.65;
+          color: rgba(200, 192, 230, 0.75);
+          max-width: 260px;
+        }
+
+        .gt-footer-col-title {
+          margin: 0 0 20px 0;
+          font-family: 'Inter', sans-serif;
+          font-weight: 600;
+          font-size: 13.5px;
+          line-height: 18px;
+          letter-spacing: 0.07em;
+          text-transform: uppercase;
+          color: #9B82F3;
+        }
+
+        .gt-footer-links-list {
+          list-style: none;
+          padding: 0;
+          margin: 0;
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+        }
+        .gt-footer-links-list a {
+          font-family: 'Inter', sans-serif;
+          font-size: 15px;
+          line-height: 22px;
+          color: rgba(210, 204, 240, 0.82);
+          text-decoration: none;
+          transition: color 0.2s ease;
+          display: inline-block;
+        }
+        .gt-footer-links-list a:hover {
+          color: #ffffff;
+        }
+
+        .gt-footer-contacts-list {
+          display: flex;
+          flex-direction: column;
+          gap: 18px;
+        }
+        .gt-footer-contact-item {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          font-family: 'Inter', sans-serif;
+          font-size: 15px;
+          line-height: 22px;
+          color: rgba(210, 204, 240, 0.82);
+          text-decoration: none;
+        }
+        .gt-footer-contact-item svg {
+          flex-shrink: 0;
+        }
+        .gt-footer-email-link {
+          color: rgba(210, 204, 240, 0.82);
+          text-decoration: underline;
+          text-underline-offset: 3px;
+          transition: color 0.2s ease;
+        }
+        .gt-footer-email-link:hover {
+          color: #ffffff;
+        }
+
+        /* ─── GELORA watermark: centered below grid, above bottom bar ─── */
+        .gt-footer-watermark-wrap {
+          position: relative;
+          width: 100%;
+          height: clamp(90px, 16vw, 200px);
+          overflow: hidden;
+          display: flex;
+          align-items: flex-end;
+          justify-content: center;
+          pointer-events: none;
+          user-select: none;
+        }
+        .gt-footer-watermark {
+          font-family: 'Inter', sans-serif;
+          font-weight: 700;
+          font-size: clamp(100px, 17vw, 260px);
+          line-height: 0.88;
+          letter-spacing: 0.01em;
+          color: #DFD7FF;
+          opacity: 0.045;
+          white-space: nowrap;
+          margin-bottom: -0.08em;
+        }
+
+        /* Bottom Bar */
+        .gt-footer-bottom {
+          position: relative;
+          z-index: 2;
+          max-width: 100%;
+          padding: 20px clamp(20px, 4vw, 48px);
+          border-top: 1px solid rgba(255, 255, 255, 0.07);
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          flex-wrap: wrap;
+          gap: 16px;
+          color: rgba(175, 165, 210, 0.6);
+          font-family: 'Inter', sans-serif;
+          font-size: 13.5px;
+        }
+        .gt-footer-legal-links {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+        }
+        .gt-footer-legal-links a {
+          color: rgba(175, 165, 210, 0.6);
+          text-decoration: none;
+          transition: color 0.2s ease;
+        }
+        .gt-footer-legal-links a:hover {
+          color: #cfc8eb;
+        }
+
+        /* ── Responsive ── */
+        @media (max-width: 960px) {
+          .gt-footer-grid { grid-template-columns: 1fr 1fr; gap: 40px; }
+        }
+        @media (max-width: 580px) {
+          .gt-footer-grid { grid-template-columns: 1fr; gap: 36px; }
+          .gt-footer-bottom { flex-direction: column; align-items: flex-start; }
+          .gt-cta-btns { flex-direction: column; width: 100%; }
+          .gt-cta-talk-btn, .gt-cta-explore-btn { width: 100%; }
+        }
+      `}</style>
+
+      {/* ─── CTA Card Section ─── */}
+      {showCta && (
+        <section className="gt-cta-wrapper" aria-label="Let's build something remarkable">
+          <div className="gt-cta-card">
+            <div className="gt-cta-circle-glow" aria-hidden="true" />
+
+            {PARTICLES.map((pt, idx) => (
+              <div
+                key={idx}
+                className="gt-particle"
+                style={{
+                  left: pt.left,
+                  top: pt.top,
+                  width: `${pt.w}px`,
+                  height: `${pt.h}px`,
+                  background: pt.bg,
+                  opacity: pt.op,
+                }}
+                aria-hidden="true"
+              />
+            ))}
+
+            <div className="gt-cta-badge">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z" />
+                <path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z" />
+                <path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0" />
+                <path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5" />
+              </svg>
+              <span className="gt-cta-badge-text">Ready to build something great?</span>
+            </div>
+
+            <h2 className="gt-cta-headline">
+              Let&apos;s build something<br />remarkable.
+            </h2>
+
+            <p className="gt-cta-subtext">
+              Tell us about your project. We respond within one<br />business day.
+            </p>
+
+            <div className="gt-cta-btns">
+              <Link href="/about" className="gt-cta-talk-btn">
+                <span className="gt-cta-talk-text">Let&apos;s Talk</span>
+                <div className="gt-cta-arrow-box">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#744FE7" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                    <polyline points="12 5 19 12 12 19" />
+                  </svg>
+                </div>
+              </Link>
+              <Link href="/services" className="gt-cta-explore-btn">
+                Explore Services
+              </Link>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ─── Footer Section ─── */}
+      <footer className="gt-footer-root">
+        <div className="gt-footer-inner">
+          {/* 4-column grid */}
+          <div className="gt-footer-grid">
+            {/* Brand */}
+            <div className="gt-footer-col">
+              <Link href="/" className="gt-footer-brand-wrap">
+                <Image src="/asset/logo.png" alt="Gelora Tech" width={34} height={34} className="gt-footer-logo-img" />
+                <Image src="/asset/gtText.png" alt="Gelora Tech" width={124} height={42} className="gt-footer-brand-text" />
+              </Link>
+              <p className="gt-footer-brand-desc">
+                Strategy, design, and technology working together to create impact.
+              </p>
+            </div>
+
+            {/* EXPLORE */}
+            <div className="gt-footer-col">
+              <h4 className="gt-footer-col-title">EXPLORE</h4>
+              <ul className="gt-footer-links-list">
+                <li><Link href="/">Home</Link></li>
+                <li><Link href="/services">Services</Link></li>
+                <li><Link href="/about">About</Link></li>
+                <li><Link href="/careers">Careers</Link></li>
+                <li><Link href="/product">Products</Link></li>
+              </ul>
+            </div>
+
+            {/* SERVICES */}
+            <div className="gt-footer-col">
+              <h4 className="gt-footer-col-title">SERVICES</h4>
+              <ul className="gt-footer-links-list">
+                <li><Link href="/services">Web Development</Link></li>
+                <li><Link href="/services">Mobile Applications</Link></li>
+                <li><Link href="/services">Cloud Solutions</Link></li>
+                <li><Link href="/services">AI Automation</Link></li>
+                <li><Link href="/services">Cybersecurity</Link></li>
+              </ul>
+            </div>
+
+            {/* LET'S CONNECT */}
+            <div className="gt-footer-col">
+              <h4 className="gt-footer-col-title">LET&apos;S CONNECT</h4>
+              <div className="gt-footer-contacts-list">
+                <a href="mailto:hello@geloratech.com" className="gt-footer-contact-item">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9B82F3" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect width="20" height="16" x="2" y="4" rx="2" />
+                    <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+                  </svg>
+                  <span className="gt-footer-email-link">hello@geloratech.com</span>
+                </a>
+                <div className="gt-footer-contact-item">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9B82F3" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+                  </svg>
+                  <span>+91 XXXXX XXXXX</span>
+                </div>
+                <div className="gt-footer-contact-item">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9B82F3" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+                  </svg>
+                  <span>+91 XXXXX XXXXX</span>
+                </div>
+                <div className="gt-footer-contact-item">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9B82F3" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0" />
+                    <circle cx="12" cy="10" r="3" />
+                  </svg>
+                  <span>Udaipur, Rajasthan</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* GELORA watermark — centered below the grid links */}
+          <div className="gt-footer-watermark-wrap" aria-hidden="true">
+            <span className="gt-footer-watermark">GELORA</span>
+          </div>
+        </div>
+
+        {/* Bottom bar — full width */}
+        <div className="gt-footer-bottom">
+          <p>© 2026 Gelora Tech. All Rights Reserved.</p>
+          <div className="gt-footer-legal-links">
+            <Link href="/privacy">Privacy Policy</Link>
+            <span>·</span>
+            <Link href="/terms">Terms &amp; Conditions</Link>
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
+}

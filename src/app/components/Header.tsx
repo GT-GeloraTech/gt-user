@@ -13,6 +13,7 @@ interface HeaderProps {
 const NAV_ITEMS = [
   { name: "Home", href: "/" },
   { name: "Services", href: "/services" },
+  { name: "Product", href: "/product" },
   { name: "About", href: "/about" },
   { name: "Careers", href: "/careers" },
 ];
@@ -20,6 +21,7 @@ const NAV_ITEMS = [
 const PAGE_TITLES: Record<string, string> = {
   "/": "Home | Gelora Tech",
   "/services": "Services | Gelora Tech",
+  "/product": "Product | Gelora Tech",
   "/about": "About | Gelora Tech",
   "/careers": "Careers | Gelora Tech",
 };
@@ -47,6 +49,7 @@ export default function Header({ activeTab, onTabChange }: HeaderProps) {
         position: "relative",
         width: "100%",
         maxWidth: "1440px",
+        margin: "0 auto",
         boxSizing: "border-box",
         minHeight: "64px",
         display: "flex",
@@ -92,7 +95,7 @@ export default function Header({ activeTab, onTabChange }: HeaderProps) {
         .hdr-nav-pill {
           position: relative;
           box-sizing: border-box;
-          width: min(470px, 42vw);
+          width: min(570px, 50vw);
           height: 48px;
           background: rgba(255, 255, 255, 0.1);
           border-radius: 355.245px;
@@ -100,14 +103,16 @@ export default function Header({ activeTab, onTabChange }: HeaderProps) {
           -webkit-backdrop-filter: blur(24px);
           display: flex;
           align-items: center;
-          justify-content: space-evenly;
-          padding: 4px 8px;
+          justify-content: center;
+          gap: 4px;
+          padding: 5px 6px;
           user-select: none;
         }
 
         /* Nav Item Link */
         .hdr-nav-item {
           position: relative;
+          box-sizing: border-box;
           font-family: 'Inter', sans-serif;
           font-style: normal;
           font-weight: 400;
@@ -118,22 +123,25 @@ export default function Header({ activeTab, onTabChange }: HeaderProps) {
           display: inline-flex;
           align-items: center;
           justify-content: center;
+          flex: 1 1 0;
+          min-width: 0;
+          max-width: 100px;
           height: 38px;
-          padding: 0 16px;
+          padding: 0 8px;
+          border: 1px solid transparent;
           border-radius: 24px;
           z-index: 2;
-          transition: color 0.25s ease, background 0.25s ease;
+          cursor: pointer;
+          transition: color 0.25s ease, background 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
         }
 
         .hdr-nav-item:hover {
           color: #ffffff;
-          background: rgba(255, 255, 255, 0.06);
+          background: rgba(255, 255, 255, 0.08);
         }
 
         /* Active Item Pill: Group 9 / Rectangle 11 & 12 */
         .hdr-nav-item.active {
-          width: 98px;
-          height: 38px;
           background: linear-gradient(180deg, rgba(116, 79, 231, 0) 0%, rgba(153, 153, 153, 0.17) 100%);
           border: 1px solid rgba(255, 255, 255, 0.2);
           backdrop-filter: blur(1.8px);
@@ -141,12 +149,13 @@ export default function Header({ activeTab, onTabChange }: HeaderProps) {
           border-radius: 24px;
           font-weight: 500;
           color: #FFFFFF;
+          box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
         }
 
         /* Let's Talk CTA Button */
         .hdr-talk-cta {
           box-sizing: border-box;
-          width: 152px;
+          width: 145px;
           height: 48px;
           background: linear-gradient(133.45deg, #8C67FE 9.67%, #EAE1FF 100%);
           box-shadow: 0px 4px 16px rgba(94, 75, 142, 0.34), inset 0px 1px 0px rgba(255, 255, 255, 0.14);
@@ -170,7 +179,7 @@ export default function Header({ activeTab, onTabChange }: HeaderProps) {
           font-style: normal;
           font-weight: 500;
           font-size: 15px;
-          line-height: 18px;
+          line-height: 15px;
           color: #FFFFFF;
         }
 
@@ -218,7 +227,7 @@ export default function Header({ activeTab, onTabChange }: HeaderProps) {
             background: rgba(24, 18, 48, 0.96);
             border: 1px solid rgba(255, 255, 255, 0.12);
           }
-          .hdr-nav-item, .hdr-nav-item.active { width: auto; }
+          .hdr-nav-item, .hdr-nav-item.active { width: auto; max-width: none; }
           .hdr-talk-cta { display: none; }
         }
 

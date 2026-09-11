@@ -131,7 +131,7 @@ export default function SplashScreen({ onComplete }: SplashScreenProps) {
     <main
       style={{
         position: "relative",
-        width: "100vw",
+        width: "100%",
         minHeight: "100vh",
         overflow: "hidden",
         display: "flex",

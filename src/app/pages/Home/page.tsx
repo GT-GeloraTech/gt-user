@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import Image from "next/image";
 import Header from "@/app/components/Header";
+import Footer from "@/app/components/Footer";
 
 const CARDS_DATA = [
   {
@@ -80,102 +81,221 @@ const PROCESS_STEPS = [
     title: "DISCOVER",
     desc: "Understand before we build.\nGoals, users & opportunities.",
     image: "/asset/ChatgptImg.png",
-    alt: "Abstract purple orbit representing product discovery",
-    borderClass: "step-border-discover",
+    alt: "Orbit radar showing product discovery",
+    imgClass: "step-img-1",
   },
   {
     step: "02",
     title: "DESIGN",
     desc: "Shape ideas into experiences.\nSimple, useful & intuitive.",
     image: "/asset/ChatgptImg2.png",
-    alt: "Design interface with pen tool and glowing shapes",
-    borderClass: "step-border-design",
+    alt: "Pen tool and floating elements showing interface design",
+    imgClass: "step-img-2",
   },
   {
     step: "03",
-    title: "DEVELOP",
-    desc: "Turn concepts into robust, scalable software.\nEngineered for performance & growth.",
+    title: "BUILD",
+    desc: "Turn concepts into reality.\nBuilt to perform and scale.",
     image: "/asset/photoroomImg.png",
-    alt: "Code editor and gears representing software development",
-    borderClass: "step-border-develop",
+    alt: "Code window and gear showing software engineering",
+    imgClass: "step-img-3",
   },
   {
     step: "04",
     title: "LAUNCH",
-    desc: "Deploy with confidence and accelerate.\nContinuous optimization & scale.",
+    desc: "Ready for the world.\nLaunch, learn & grow.",
     image: "/asset/photoroomImg2.png",
-    alt: "Rocket launch representing product release",
-    borderClass: "step-border-launch",
+    alt: "Rocket taking off showing product launch",
+    imgClass: "step-img-4",
   },
 ];
 
 export default function HomePage() {
-  const processContainerRef = useRef<HTMLDivElement>(null);
-  const [activeStepIndex, setActiveStepIndex] = useState<number>(0);
-  const touchStartX = useRef<number | null>(null);
+  /* ────────────────────────────────────────────────────────
+   * Refs & State
+   * ─────────────────────────────────────────────────────── */
+  const sectionRef = useRef<HTMLElement>(null);
+
+  const [isLocked, setIsLocked] = useState(false);
+  const isLockedRef = useRef(false);
+
+  const [activeStepIndex, setActiveStepIndex] = useState(0);
+  const activeStepRef = useRef(0);
+
+  const wheelCooldown = useRef(false);
+  const touchStartY = useRef<number | null>(null);
+  const isUnlockingRef = useRef(false);
+  const prevScrollY = useRef(0);
+
   const totalSteps = PROCESS_STEPS.length;
 
+  /* ────────────────────────────────────────────────────────
+   * Helpers
+   * ─────────────────────────────────────────────────────── */
+  const goToStep = useCallback((idx: number) => {
+    activeStepRef.current = idx;
+    setActiveStepIndex(idx);
+  }, []);
+
+  /** Lock the viewport onto the process section at a given step */
+  const lockProcess = useCallback((stepIdx: number, targetTop?: number) => {
+    if (isLockedRef.current) return;
+    isLockedRef.current = true;
+    setIsLocked(true);
+    activeStepRef.current = stepIdx;
+    setActiveStepIndex(stepIdx);
+    document.documentElement.style.overflow = "hidden";
+    document.body.style.overflow = "hidden";
+    if (typeof targetTop === "number") {
+      window.scrollTo({ top: targetTop, behavior: "instant" });
+    }
+  }, []);
+
+  /**
+   * Release the viewport lock and allow natural scroll to proceed.
+   * direction: 'down' → user completed step 4 and scrolls into content below
+   *            'up'   → user scrolled up from step 1 back to top content (About)
+   */
+  const unlockProcess = useCallback((direction: "down" | "up") => {
+    if (!isLockedRef.current) return;
+    isLockedRef.current = false;
+    setIsLocked(false);
+    isUnlockingRef.current = true;
+
+    document.documentElement.style.overflow = "";
+    document.body.style.overflow = "";
+
+    const offsetTop = sectionRef.current ? sectionRef.current.offsetTop : window.scrollY;
+
+    if (direction === "down") {
+      // Smoothly scroll down past the section into content below
+      window.scrollTo({ top: offsetTop + window.innerHeight * 0.45, behavior: "smooth" });
+    } else {
+      // Smoothly scroll up above the section into About section
+      window.scrollTo({ top: Math.max(0, offsetTop - window.innerHeight * 0.45), behavior: "smooth" });
+    }
+
+    // Cooldown prevents immediately re-locking while smooth scroll moves the viewport
+    setTimeout(() => {
+      isUnlockingRef.current = false;
+      prevScrollY.current = window.scrollY;
+    }, 850);
+  }, []);
+
+  /* ────────────────────────────────────────────────────────
+   * Event listeners
+   * ─────────────────────────────────────────────────────── */
   useEffect(() => {
-    let ticking = false;
+    prevScrollY.current = window.scrollY;
 
-    const handleScroll = () => {
-      if (!ticking) {
-        window.requestAnimationFrame(() => {
-          if (processContainerRef.current) {
-            const rect = processContainerRef.current.getBoundingClientRect();
-            const containerHeight = processContainerRef.current.offsetHeight;
-            const windowHeight = window.innerHeight;
-            const totalDist = containerHeight - windowHeight;
+    /** Detects when the user scrolls into the process section from top or bottom */
+    const onScroll = () => {
+      if (isLockedRef.current || isUnlockingRef.current) return;
+      if (!sectionRef.current) return;
 
-            if (totalDist > 0) {
-              const scrolled = -rect.top;
-              const progress = Math.min(Math.max(scrolled / totalDist, 0), 1);
-              const stepIdx = Math.min(
-                Math.floor(progress * totalSteps),
-                totalSteps - 1
-              );
-              setActiveStepIndex(stepIdx);
-            }
-          }
-          ticking = false;
-        });
-        ticking = true;
+      const curY = window.scrollY;
+      const scrollingDown = curY >= prevScrollY.current;
+      prevScrollY.current = curY;
+
+      const rect = sectionRef.current.getBoundingClientRect();
+      const offsetTop = sectionRef.current.offsetTop;
+
+      if (scrollingDown) {
+        // Scrolling DOWN into section from above: lock at Step 1 (0)
+        if (rect.top <= 25 && rect.top >= -80) {
+          lockProcess(0, offsetTop);
+        }
+      } else {
+        // Scrolling UP into section from below: lock at Step 4 (last step)
+        if (rect.bottom >= window.innerHeight - 25 && rect.bottom <= window.innerHeight + 80) {
+          lockProcess(totalSteps - 1, offsetTop);
+        }
       }
     };
 
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    window.addEventListener("resize", handleScroll, { passive: true });
-    handleScroll();
+    /** Intercepts wheel events while locked to cycle through steps in place */
+    const onWheel = (e: WheelEvent) => {
+      if (!isLockedRef.current) return;
+      e.preventDefault(); // Lock page scroll
+
+      if (wheelCooldown.current) return;
+      wheelCooldown.current = true;
+      setTimeout(() => {
+        wheelCooldown.current = false;
+      }, 550);
+
+      const goingDown = e.deltaY > 0;
+      const cur = activeStepRef.current;
+
+      if (goingDown) {
+        if (cur < totalSteps - 1) {
+          goToStep(cur + 1);
+        } else {
+          // All steps completed going down → unlock downward to reveal below content
+          unlockProcess("down");
+        }
+      } else {
+        // Scrolling UP
+        if (cur > 0) {
+          // Reduce step: 4 -> 3 -> 2 -> 1
+          goToStep(cur - 1);
+        } else {
+          // At Step 1 and scrolling UP → unlock upward to reveal top content
+          unlockProcess("up");
+        }
+      }
+    };
+
+    /** Keyboard navigation while locked */
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (!isLockedRef.current) return;
+      const cur = activeStepRef.current;
+      if (e.key === "ArrowDown" || e.key === "PageDown") {
+        e.preventDefault();
+        if (cur < totalSteps - 1) goToStep(cur + 1);
+        else unlockProcess("down");
+      } else if (e.key === "ArrowUp" || e.key === "PageUp") {
+        e.preventDefault();
+        if (cur > 0) goToStep(cur - 1);
+        else unlockProcess("up");
+      }
+    };
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("wheel", onWheel, { passive: false });
+    window.addEventListener("keydown", onKeyDown);
 
     return () => {
-      window.removeEventListener("scroll", handleScroll);
-      window.removeEventListener("resize", handleScroll);
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("wheel", onWheel);
+      window.removeEventListener("keydown", onKeyDown);
+      document.documentElement.style.overflow = "";
+      document.body.style.overflow = "";
     };
-  }, [totalSteps]);
+  }, [goToStep, lockProcess, unlockProcess, totalSteps]);
 
-  const scrollToStep = (index: number) => {
-    if (!processContainerRef.current) return;
-    const container = processContainerRef.current;
-    const containerTop = container.getBoundingClientRect().top + window.scrollY;
-    const totalDist = container.offsetHeight - window.innerHeight;
-    const targetY = containerTop + (totalDist * (index / (totalSteps - 1)));
-    window.scrollTo({ top: targetY, behavior: "smooth" });
-    setActiveStepIndex(index);
-  };
-
+  /* ────────────────────────────────────────────────────────
+   * Touch handlers (mobile swipe)
+   * ─────────────────────────────────────────────────────── */
   const handleTouchStart = (e: React.TouchEvent) => {
-    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
   };
 
   const handleTouchEnd = (e: React.TouchEvent) => {
-    if (touchStartX.current === null) return;
-    const diffX = touchStartX.current - e.changedTouches[0].clientX;
-    if (diffX > 40 && activeStepIndex < totalSteps - 1) {
-      scrollToStep(activeStepIndex + 1);
-    } else if (diffX < -40 && activeStepIndex > 0) {
-      scrollToStep(activeStepIndex - 1);
+    if (touchStartY.current === null) return;
+    const diff = touchStartY.current - e.changedTouches[0].clientY;
+    touchStartY.current = null;
+    if (Math.abs(diff) < 40) return;
+    const cur = activeStepRef.current;
+    if (diff > 0) {
+      // swipe up → advance step
+      if (cur < totalSteps - 1) goToStep(cur + 1);
+      else unlockProcess("down");
+    } else {
+      // swipe down → reduce step: 4 -> 3 -> 2 -> 1
+      if (cur > 0) goToStep(cur - 1);
+      else unlockProcess("up");
     }
-    touchStartX.current = null;
   };
 
   return (
@@ -327,9 +447,12 @@ export default function HomePage() {
           position: relative;
           width: 100%;
           height: 760px;
-          padding-top: clamp(10px, 1.5vw, 18px);
+          padding-top: 24px;
           overflow: hidden;
           background: #0b0916 url('/asset/bg.png') top center / cover no-repeat;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
         }
 
         .hero-title-container {
@@ -411,7 +534,8 @@ export default function HomePage() {
           display: flex;
           align-items: center;
           gap: 52px;
-          padding: 0 8px;
+          padding-right: 52px;
+          padding-left: 0;
           white-space: nowrap;
         }
 
@@ -612,373 +736,364 @@ export default function HomePage() {
         }
 
         /* ─── Modern Process Section ("How We Work") ─── */
-        .process-scroll-container {
+        .process-section {
           position: relative;
-          height: 380vh;
-          background: #080512;
-        }
-
-        .process-sticky-stage {
-          position: sticky;
-          top: 0;
-          height: 100vh;
           width: 100%;
+          height: 100vh;
+          min-height: 680px;
+          max-height: 1024px;
           overflow: hidden;
-          display: flex;
-          align-items: center;
-          background: radial-gradient(circle at 50% 30%, #1c103a 0%, #0c0818 55%, #070510 100%);
-          color: #ffffff;
+          background: linear-gradient(117.25deg, #0B0916 15.2%, rgba(25, 13, 70, 0.8) 52.43%, #0A0815 77.43%);
+          backdrop-filter: blur(27.7px);
+          -webkit-backdrop-filter: blur(27.7px);
           isolation: isolate;
+          user-select: none;
+          display: block;
 
-          --card-w: clamp(330px, 26.5vw, 395px);
-          --card-h: clamp(470px, 59vh, 525px);
-          --intro-left: clamp(36px, 6.8vw, 92px);
-          --intro-w: clamp(280px, 22.5vw, 335px);
+          /* Proportional sizing variables matching Figma proportions */
+          --card-w: clamp(340px, 33vw, 482px);
+          --card-h: clamp(470px, 58vh, 552px);
+          --card-gap: clamp(80px, 12vw, 255px);
+          --edge-pad: clamp(40px, 6.5vw, 98px);
         }
 
-        .process-glow-bg {
+        /* Ellipse 12 Background Glow */
+        .process-ellipse-12 {
           position: absolute;
           inset: 0;
+          width: 100%;
+          height: 100%;
+          background: radial-gradient(ellipse 90% 80% at 50% 50%, #FFFFFF 0%, rgba(191, 239, 255, 0.8) 25%, rgba(160, 109, 255, 0.35) 60%, rgba(160, 109, 255, 0) 100%);
+          mix-blend-mode: difference;
+          opacity: 0.05;
           pointer-events: none;
-          background:
-            radial-gradient(850px circle at 62% 32%, rgba(147, 102, 255, 0.16), transparent 70%),
-            radial-gradient(650px circle at 26% 68%, rgba(79, 70, 229, 0.12), transparent 60%);
           z-index: 1;
         }
 
-        .process-intro {
+        /* Left Intro Block (visible on Step 01, fades when activeStepIndex > 0) */
+        .process-intro-block {
           position: absolute;
-          left: var(--intro-left);
-          top: clamp(80px, 15vh, 150px);
-          width: var(--intro-w);
+          left: var(--edge-pad);
+          top: clamp(44px, 10vh, 100px);
+          width: clamp(260px, 23vw, 340px);
           z-index: 10;
-          transition: opacity 0.65s cubic-bezier(0.16, 1, 0.3, 1), transform 0.65s cubic-bezier(0.16, 1, 0.3, 1);
+          transition: opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1), transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
         }
-
-        .process-intro.is-hidden {
+        .process-intro-block.is-hidden {
           opacity: 0;
-          transform: translateX(-45px);
+          transform: translateX(-36px);
           pointer-events: none;
         }
 
-        .process-kicker {
-          margin: 0 0 20px 0;
-          color: #9d8ec7;
+        .process-kicker-figma {
+          margin: 0 0 clamp(16px, 2.4vh, 26px) 0;
           font-family: 'Inter', sans-serif;
-          font-size: 15px;
-          font-weight: 500;
-          letter-spacing: 0.08em;
-          text-transform: uppercase;
+          font-style: normal;
+          font-weight: 300;
+          font-size: clamp(16px, 1.4vw, 20px);
+          line-height: 1.5;
+          letter-spacing: -0.005em;
+          color: #B09DEA;
         }
 
-        .process-title {
-          margin: 0;
+        .process-title-figma {
+          margin: 0 0 clamp(20px, 3vh, 36px) 0;
+          width: 100%;
           font-family: 'Inter', sans-serif;
-          font-size: clamp(38px, 3.6vw, 48px);
           font-style: italic;
           font-weight: 400;
-          letter-spacing: 0.04em;
-          line-height: 1.15;
-          color: #ffffff;
+          font-size: clamp(34px, 3.1vw, 44px);
+          line-height: 1.16;
+          letter-spacing: 0.08em;
+          color: #FFFFFF;
         }
 
-        .process-title-accent {
-          color: #aa97ea;
-          text-shadow: 0 0 20px rgba(170, 151, 234, 0.3);
-        }
-
-        .process-description {
-          margin: 36px 0 0 0;
+        .process-desc-figma {
+          margin: 0;
+          width: 100%;
+          max-width: 331px;
           font-family: 'Inter', sans-serif;
-          font-size: 16px;
+          font-style: normal;
           font-weight: 400;
+          font-size: clamp(15px, 1.25vw, 18px);
           line-height: 1.62;
-          color: #cfc5eb;
-          max-width: 320px;
+          color: #FFFFFF;
         }
 
-        .process-number-wrap {
+        /* Giant Number 01/02/03/04: bottom left */
+        .process-giant-number-wrap {
           position: absolute;
-          left: var(--intro-left);
-          bottom: clamp(16px, 4vh, 38px);
-          height: clamp(120px, 16vw, 190px);
-          width: clamp(180px, 20vw, 260px);
-          z-index: 10;
+          left: var(--edge-pad);
+          bottom: clamp(12px, 3vh, 48px);
+          height: clamp(140px, 16vw, 220px);
+          width: clamp(180px, 22vw, 340px);
+          z-index: 8;
           pointer-events: none;
         }
-
-        .process-number {
+        .process-giant-number {
           position: absolute;
           left: 0;
           bottom: 0;
           margin: 0;
           font-family: 'Inter', sans-serif;
-          font-size: clamp(140px, 16vw, 210px);
+          font-style: normal;
           font-weight: 700;
-          letter-spacing: -0.05em;
+          font-size: clamp(160px, 17.5vw, 250px);
           line-height: 0.82;
-          color: #dfd7ff;
-          transition: opacity 0.55s cubic-bezier(0.16, 1, 0.3, 1), transform 0.55s cubic-bezier(0.16, 1, 0.3, 1);
+          color: #DFD7FF;
+          letter-spacing: -0.04em;
+          transition: opacity 0.45s cubic-bezier(0.16, 1, 0.3, 1), transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
         }
-
-        .process-number.is-active {
+        .process-giant-number.is-active {
           opacity: 1;
           transform: translateY(0);
         }
-
-        .process-number.is-hidden-up {
+        .process-giant-number.is-hidden-up {
           opacity: 0;
           transform: translateY(-40px);
         }
-
-        .process-number.is-hidden-down {
+        .process-giant-number.is-hidden-down {
           opacity: 0;
           transform: translateY(40px);
         }
 
-        /* Right Rectangle Peek (exact match to target Image 2) */
-        .process-card-peek-right {
+        /* Left Peek Card (Rectangle 178): bleeds off left screen edge */
+        .process-card-peek-left-figma {
+          box-sizing: border-box;
           position: absolute;
-          top: 50%;
-          right: clamp(-180px, -8vw, -100px);
-          transform: translateY(-50%);
           width: var(--card-w);
           height: var(--card-h);
-          border-radius: 24px;
-          border: 1.2px solid rgba(255, 255, 255, 0.14);
-          background: linear-gradient(135deg, rgba(26, 18, 54, 0.3) 0%, rgba(16, 11, 35, 0.4) 100%);
-          backdrop-filter: blur(10px);
-          -webkit-backdrop-filter: blur(10px);
-          opacity: 0.28;
+          right: calc(50% + (var(--card-w) / 2) + var(--card-gap));
+          top: 50%;
+          transform: translateY(-50%);
+          background: linear-gradient(111.68deg, rgba(255, 255, 255, 0.058) 7.59%, rgba(255, 255, 255, 0.078) 102.04%);
+          opacity: 0;
+          border: 3px solid #6D51C6;
+          backdrop-filter: blur(11px);
+          -webkit-backdrop-filter: blur(11px);
+          border-radius: 20px;
+          cursor: pointer;
           pointer-events: none;
-          z-index: 2;
-          box-sizing: border-box;
+          z-index: 4;
+          transition: opacity 0.45s ease, transform 0.3s ease;
+        }
+        .process-card-peek-left-figma.is-visible {
+          opacity: 0.3;
+          pointer-events: auto;
+        }
+        .process-card-peek-left-figma:hover {
+          opacity: 0.55;
+          transform: translateY(-50%) translateX(6px);
         }
 
-        /* Left Rectangle Peek (shown on step 2, 3, 4) */
-        .process-card-peek-left {
+        /* Right Peek Card (Rectangle 177): bleeds off right screen edge */
+        .process-card-peek-right-figma {
+          box-sizing: border-box;
           position: absolute;
-          top: 50%;
-          left: clamp(-180px, -8vw, -100px);
-          transform: translateY(-50%);
           width: var(--card-w);
           height: var(--card-h);
-          border-radius: 24px;
-          border: 1.2px solid rgba(255, 255, 255, 0.14);
-          background: linear-gradient(135deg, rgba(26, 18, 54, 0.3) 0%, rgba(16, 11, 35, 0.4) 100%);
-          backdrop-filter: blur(10px);
-          -webkit-backdrop-filter: blur(10px);
+          left: calc(50% + (var(--card-w) / 2) + var(--card-gap));
+          top: 50%;
+          transform: translateY(-50%);
+          background: linear-gradient(111.68deg, rgba(255, 255, 255, 0.058) 7.59%, rgba(255, 255, 255, 0.078) 102.04%);
+          opacity: 0;
+          border: 3px solid #6D51C6;
+          backdrop-filter: blur(11px);
+          -webkit-backdrop-filter: blur(11px);
+          border-radius: 20px;
+          cursor: pointer;
           pointer-events: none;
-          z-index: 2;
-          box-sizing: border-box;
-          transition: opacity 0.5s ease;
+          z-index: 4;
+          transition: opacity 0.45s ease, transform 0.3s ease;
+        }
+        .process-card-peek-right-figma.is-visible {
+          opacity: 0.3;
+          pointer-events: auto;
+        }
+        .process-card-peek-right-figma:hover {
+          opacity: 0.55;
+          transform: translateY(-50%) translateX(-6px);
         }
 
-        .process-cards-stage {
+        /* Center Card Container */
+        .process-cards-container {
+          position: absolute;
+          left: 50%;
+          top: 50%;
+          transform: translate(-50%, -50%);
+          width: var(--card-w);
+          height: var(--card-h);
+          z-index: 10;
+        }
+
+        /* Active Center Card (Rectangle 176): width: 482px, height: 552px */
+        .process-center-card {
+          box-sizing: border-box;
           position: absolute;
           inset: 0;
-          z-index: 5;
-          pointer-events: none;
-        }
-
-        /* Center-aligned card with smooth stacked scroll transitions */
-        .process-card {
-          position: absolute;
-          top: 50%;
-          left: 50%;
-          width: var(--card-w);
-          height: var(--card-h);
-          border-radius: 24px;
-          box-sizing: border-box;
+          width: 100%;
+          height: 100%;
+          background: linear-gradient(111.68deg, rgba(26, 18, 55, 0.2) 7.59%, rgba(155, 137, 244, 0.2) 102.04%);
+          border: 3px solid rgba(109, 81, 198, 0.68);
+          backdrop-filter: blur(11px);
+          -webkit-backdrop-filter: blur(11px);
+          border-radius: 20px;
           overflow: hidden;
-          background: linear-gradient(135deg, rgba(26, 18, 54, 0.82) 0%, rgba(16, 11, 35, 0.92) 100%);
-          backdrop-filter: blur(20px);
-          -webkit-backdrop-filter: blur(20px);
           display: flex;
           flex-direction: column;
           justify-content: space-between;
-          transition: transform 0.68s cubic-bezier(0.16, 1, 0.3, 1),
-                      opacity 0.58s cubic-bezier(0.16, 1, 0.3, 1),
-                      visibility 0.58s;
-          user-select: none;
-          pointer-events: auto;
+          transition: opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1), transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.5s;
         }
-
-        .process-card.is-active {
+        .process-center-card.is-active {
           opacity: 1;
           visibility: visible;
-          transform: translate(-50%, -50%) scale(1);
-          z-index: 10;
+          transform: scale(1);
           pointer-events: auto;
         }
-
-        .process-card.is-passed {
+        .process-center-card.is-passed {
           opacity: 0;
           visibility: hidden;
-          transform: translate(-50%, calc(-50% - 32px)) scale(0.95);
-          z-index: 5;
+          transform: scale(0.96) translateX(-24px);
+          pointer-events: none;
+        }
+        .process-center-card.is-incoming {
+          opacity: 0;
+          visibility: hidden;
+          transform: scale(1.02) translateX(24px);
           pointer-events: none;
         }
 
-        .process-card.is-incoming {
-          opacity: 0;
-          visibility: hidden;
-          transform: translate(-50%, calc(-50% + 44px)) scale(1.02);
-          z-index: 1;
-          pointer-events: none;
-        }
-
-        /* Glow border styles for the steps */
-        .step-border-discover {
-          border: 1.5px solid rgba(139, 92, 246, 0.45);
-          box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6), inset 0 0 24px rgba(139, 92, 246, 0.08);
-        }
-
-        .step-border-design {
-          border: 2px solid #2874ff;
-          box-shadow: 0 0 34px rgba(40, 116, 255, 0.55), 0 24px 60px rgba(0, 0, 0, 0.6), inset 0 0 18px rgba(40, 116, 255, 0.16);
-        }
-
-        .step-border-develop {
-          border: 2px solid #8b5cf6;
-          box-shadow: 0 0 34px rgba(139, 92, 246, 0.55), 0 24px 60px rgba(0, 0, 0, 0.6), inset 0 0 18px rgba(139, 92, 246, 0.16);
-        }
-
-        .step-border-launch {
-          border: 2px solid #a855f7;
-          box-shadow: 0 0 34px rgba(168, 85, 247, 0.55), 0 24px 60px rgba(0, 0, 0, 0.6), inset 0 0 18px rgba(168, 85, 247, 0.16);
-        }
-
-        .process-card-image-wrap {
+        /* Center card image area */
+        .process-center-card-img-wrap {
           width: 100%;
-          height: 56%;
+          height: 60%;
           display: flex;
           align-items: center;
           justify-content: center;
-          padding: 24px 20px 0;
-          box-sizing: border-box;
           position: relative;
+          padding-top: 16px;
+          box-sizing: border-box;
         }
-
         .process-card-image {
-          max-width: 86%;
-          max-height: 86%;
-          width: auto;
+          max-width: 90%;
+          max-height: 90%;
           height: auto;
           object-fit: contain;
-          filter: drop-shadow(0 12px 24px rgba(0, 0, 0, 0.35));
+          transition: transform 0.5s ease;
+        }
+        .process-card-image.step-img-1 {
+          width: 88%;
+          opacity: 0.95;
+        }
+        .process-card-image.step-img-2 {
+          width: 82%;
+          transform: rotate(7.94deg);
+          opacity: 0.95;
+        }
+        .process-card-image.step-img-3 {
+          width: 80%;
+          opacity: 0.95;
+        }
+        .process-card-image.step-img-4 {
+          width: 76%;
+          opacity: 0.95;
         }
 
-        .process-card-content {
-          padding: 16px 32px 36px;
+        /* Center card text area */
+        .process-center-card-body {
+          padding: 0 clamp(24px, 3vw, 42px) clamp(24px, 3.5vh, 40px);
+          display: flex;
+          flex-direction: column;
+          justify-content: flex-end;
           box-sizing: border-box;
         }
-
-        .process-card-content h3 {
-          margin: 0 0 12px 0;
+        .process-card-title {
+          margin: 0 0 10px 0;
           font-family: 'Inter', sans-serif;
-          font-size: 24px;
+          font-style: normal;
           font-weight: 700;
-          letter-spacing: 0.04em;
-          color: #ffffff;
+          font-size: clamp(22px, 2vw, 28px);
+          line-height: 1.35;
+          letter-spacing: 0.02em;
+          color: #FFFFFF;
         }
-
-        .process-card-content p {
+        .process-card-desc {
           margin: 0;
           font-family: 'Inter', sans-serif;
-          font-size: 14.5px;
-          line-height: 1.55;
-          color: #cfc5eb;
+          font-style: normal;
+          font-weight: 400;
+          font-size: clamp(14.5px, 1.25vw, 18px);
+          line-height: 1.58;
+          color: #FFFFFF;
         }
 
-        @media (max-width: 1080px) {
-          .process-sticky-stage {
-            --card-w: clamp(290px, 34vw, 350px);
-            --card-h: clamp(450px, 56vh, 490px);
-            --card-gap: 24px;
-            --intro-left: 28px;
-            --intro-w: 260px;
-            --intro-gap: 32px;
-          }
-          .process-number {
-            font-size: clamp(110px, 13vw, 150px);
-          }
-        }
-
+        /* ── Responsive ── */
         @media (max-width: 860px) {
           .home-hero { height: 680px; }
           .trusted-strip { min-height: 92px; padding-bottom: 27px; }
           .trusted-label { margin-bottom: 14px; font-size: 9px; }
-          .trusted-group { gap: 28px; padding: 0 20px; }
+          .trusted-group { gap: 28px; padding-right: 28px; padding-left: 0; }
           .trusted-company { font-size: 14px; }
           .about-section { min-height: auto; padding: 42px 20px 60px; }
           .about-heading { margin: 24px auto 32px; font-size: clamp(34px, 9vw, 48px); }
-          .about-mosaic {
-            flex-direction: column;
-            gap: 16px;
-          }
-          .about-mosaic-main {
-            gap: 16px;
-          }
-          .about-row {
-            flex-direction: column;
-            height: auto;
-            gap: 16px;
-          }
+          .about-mosaic { flex-direction: column; gap: 16px; }
+          .about-mosaic-main { gap: 16px; }
+          .about-row { flex-direction: column; height: auto; gap: 16px; }
           .about-tile { min-height: 220px; }
-          .about-analytics {
-            width: 100%;
-            min-height: 300px;
-            flex: auto;
-          }
+          .about-analytics { width: 100%; min-height: 300px; flex: auto; }
           .about-future .tile-content { padding: 24px; }
-          /* Process section mobile responsive */
-          .process-scroll-container {
-            height: 320vh;
+
+          /* Process section mobile */
+          .process-section {
+            height: auto;
+            min-height: 700px;
+            padding: 60px 20px 80px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
           }
-          .process-sticky-stage {
-            --card-w: min(340px, 86vw);
-            --card-h: min(475px, 58vh);
-            --intro-left: 20px;
+          .process-intro-block {
+            position: relative;
+            left: auto;
+            top: auto;
+            width: 100%;
+            margin-bottom: 32px;
           }
-          .process-intro {
-            top: 28px;
-            left: 20px;
-            right: 20px;
-            width: auto;
-          }
-          .process-intro.is-hidden {
-            opacity: 0;
-            transform: translateY(-20px);
-            pointer-events: none;
-          }
-          .process-kicker {
-            margin-bottom: 8px;
-            font-size: 13px;
-          }
-          .process-title {
-            font-size: clamp(26px, 7vw, 32px);
-          }
-          .process-description {
-            margin-top: 8px;
-            font-size: 13.5px;
-            max-width: 100%;
-          }
-          .process-card {
-            top: 52%;
-          }
-          .process-card-peek-right,
-          .process-card-peek-left {
+          .process-intro-block.is-hidden {
             display: none;
           }
-          .process-number-wrap {
-            bottom: 14px;
-            left: 20px;
-            height: 85px;
-            width: 140px;
+          .process-kicker-figma { font-size: 16px; margin-bottom: 12px; }
+          .process-title-figma { font-size: 32px; line-height: 38px; width: 100%; margin-bottom: 16px; }
+          .process-desc-figma { font-size: 15px; line-height: 24px; width: 100%; }
+          .process-card-peek-left-figma,
+          .process-card-peek-right-figma {
+            display: none;
           }
-          .process-number {
-            font-size: 88px;
+          .process-cards-container {
+            position: relative;
+            left: auto;
+            top: auto;
+            transform: none;
+            width: 100%;
+            max-width: 440px;
+            height: 520px;
+            margin: 0 auto;
+          }
+          .process-giant-number-wrap {
+            position: relative;
+            left: auto;
+            bottom: auto;
+            width: 100%;
+            height: 120px;
+            margin-top: 24px;
+            display: flex;
+            justify-content: center;
+          }
+          .process-giant-number {
+            position: relative;
+            left: auto;
+            bottom: auto;
+            font-size: 120px;
           }
         }
 
@@ -1101,105 +1216,113 @@ export default function HomePage() {
         </div>
       </section>
 
-      <div
-        ref={processContainerRef}
-        className={`process-scroll-container step-${activeStepIndex + 1}`}
+      {/* ── Process Section ("How We Work") ── */}
+      <section
+        ref={sectionRef}
+        className="process-section"
+        id="process"
         aria-label="How we work process"
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
-        <div className="process-sticky-stage">
-          {/* Subtle atmospheric ambient glow */}
-          <div className="process-glow-bg" />
+        {/* Ellipse 12 Background Glow */}
+        <div className="process-ellipse-12" aria-hidden="true" />
 
-          {/* Left Intro Text (visible in Step 1, smoothly hidden in later steps) */}
-          <div className={`process-intro ${activeStepIndex > 0 ? "is-hidden" : ""}`}>
-            <p className="process-kicker">HOW WE WORK</p>
-            <h2 id="process-heading" className="process-title">
-              From idea<br />
-              to <span className="process-title-accent">impact.</span>
-            </h2>
-            <p className="process-description">
-              A thoughtful process that turns your vision into scalable digital experiences built for growth
-            </p>
-          </div>
-
-          {/* Left Rectangle Peek (visible on subsequent steps) */}
-          <div
-            className="process-card-peek-left"
-            style={{ opacity: activeStepIndex > 0 ? 0.28 : 0 }}
-            aria-hidden="true"
-          />
-
-          {/* Right Rectangle Peek (exact match to target Image 2) */}
-          <div
-            className="process-card-peek-right"
-            aria-hidden="true"
-          />
-
-          {/* Giant Number Indicator at Bottom-Left */}
-          <div className="process-number-wrap">
-            {PROCESS_STEPS.map((s, idx) => (
-              <span
-                key={s.step}
-                className={`process-number ${
-                  idx === activeStepIndex
-                    ? "is-active"
-                    : idx < activeStepIndex
-                    ? "is-hidden-up"
-                    : "is-hidden-down"
-                }`}
-                aria-hidden={idx !== activeStepIndex}
-              >
-                {s.step}
-              </span>
-            ))}
-          </div>
-
-          {/* Centered Stacking Cards Stage */}
-          <div className="process-cards-stage">
-            {PROCESS_STEPS.map((step, idx) => (
-              <article
-                key={step.step}
-                className={`process-card ${step.borderClass} ${
-                  idx === activeStepIndex
-                    ? "is-active"
-                    : idx < activeStepIndex
-                    ? "is-passed"
-                    : "is-incoming"
-                }`}
-                onClick={() => scrollToStep(idx)}
-                role="button"
-                tabIndex={0}
-                aria-label={`Step ${step.step}: ${step.title}`}
-                aria-hidden={idx !== activeStepIndex}
-              >
-                <div className="process-card-image-wrap">
-                  <Image
-                    className="process-card-image"
-                    src={step.image}
-                    alt={step.alt}
-                    width={340}
-                    height={340}
-                    priority={idx === 0}
-                  />
-                </div>
-                <div className="process-card-content">
-                  <h3>{step.title}</h3>
-                  <p>
-                    {step.desc.split("\n").map((line, lineIdx) => (
-                      <span key={lineIdx}>
-                        {line}
-                        {lineIdx < step.desc.split("\n").length - 1 && <br />}
-                      </span>
-                    ))}
-                  </p>
-                </div>
-              </article>
-            ))}
-          </div>
+        {/* Left Intro Block (visible on Step 01, fades when activeStepIndex > 0) */}
+        <div className={`process-intro-block ${activeStepIndex > 0 ? "is-hidden" : ""}`}>
+          <p className="process-kicker-figma">HOW WE WORK</p>
+          <h2 id="process-heading" className="process-title-figma">
+            From idea<br />
+            to impact.
+          </h2>
+          <p className="process-desc-figma">
+            A thoughtful process that turns your vision into scalable digital experiences built for growth
+          </p>
         </div>
-      </div>
+
+        {/* Left Peek Card (Rectangle 178) - visible on step 02, 03, 04 */}
+        <div
+          className={`process-card-peek-left-figma ${activeStepIndex > 0 ? "is-visible" : ""}`}
+          onClick={() => {
+            if (activeStepIndex > 0) goToStep(activeStepIndex - 1);
+          }}
+          role="button"
+          tabIndex={activeStepIndex > 0 ? 0 : -1}
+          aria-label="Previous step"
+        />
+
+        {/* Right Peek Card (Rectangle 177) - visible on step 01, 02, 03 */}
+        <div
+          className={`process-card-peek-right-figma ${activeStepIndex < totalSteps - 1 ? "is-visible" : ""}`}
+          onClick={() => {
+            if (activeStepIndex < totalSteps - 1) goToStep(activeStepIndex + 1);
+          }}
+          role="button"
+          tabIndex={activeStepIndex < totalSteps - 1 ? 0 : -1}
+          aria-label="Next step"
+        />
+
+        {/* Giant Step Number: "01", "02", "03", "04" */}
+        <div className="process-giant-number-wrap">
+          {PROCESS_STEPS.map((s, idx) => (
+            <span
+              key={s.step}
+              className={`process-giant-number ${
+                idx === activeStepIndex ? "is-active"
+                : idx < activeStepIndex ? "is-hidden-up"
+                : "is-hidden-down"
+              }`}
+              aria-hidden={idx !== activeStepIndex}
+            >
+              {s.step}
+            </span>
+          ))}
+        </div>
+
+        {/* Center Card Stack (Rectangle 176) */}
+        <div className="process-cards-container">
+          {PROCESS_STEPS.map((step, idx) => (
+            <article
+              key={step.step}
+              className={`process-center-card ${
+                idx === activeStepIndex ? "is-active"
+                : idx < activeStepIndex ? "is-passed"
+                : "is-incoming"
+              }`}
+              onClick={() => goToStep(idx)}
+              role="button"
+              tabIndex={0}
+              aria-label={`Step ${step.step}: ${step.title}`}
+              aria-hidden={idx !== activeStepIndex}
+            >
+              <div className="process-center-card-img-wrap">
+                <Image
+                  className={`process-card-image ${step.imgClass}`}
+                  src={step.image}
+                  alt={step.alt}
+                  width={480}
+                  height={350}
+                  priority={idx === 0}
+                />
+              </div>
+              <div className="process-center-card-body">
+                <h3 className="process-card-title">{step.title}</h3>
+                <p className="process-card-desc">
+                  {step.desc.split("\n").map((line, lineIdx) => (
+                    <span key={lineIdx}>
+                      {line}
+                      {lineIdx < step.desc.split("\n").length - 1 && <br />}
+                    </span>
+                  ))}
+                </p>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      {/* ── Content Below Process Section: CTA Section & Footer ── */}
+      <Footer />
     </main>
   );
 }
