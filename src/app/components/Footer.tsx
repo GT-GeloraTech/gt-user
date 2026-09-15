@@ -209,71 +209,66 @@ export default function Footer({ showCta = true }: FooterProps) {
         .gt-footer-root {
           position: relative;
           width: 100%;
-          background: #080512 url('/asset/bg.png') center center / cover no-repeat;
+          background: radial-gradient(90% 125% at 50% 0%, #1e0d3e 0%, #130728 52%, #0b0318 100%);
+          border-top: 1px solid rgba(167, 139, 250, 0.16);
           overflow: hidden;
           box-sizing: border-box;
-        }
-        .gt-footer-root::before {
-          content: '';
-          position: absolute;
-          inset: 0;
-          background: rgba(6, 3, 18, 0.68);
-          pointer-events: none;
-          z-index: 0;
         }
 
         /* Inner container */
         .gt-footer-inner {
           position: relative;
           z-index: 2;
-          max-width: 1200px;
+          width: 100%;
+          max-width: 1440px;
           margin: 0 auto;
-          padding: 72px clamp(20px, 4vw, 48px) 0;
+          padding: 68px clamp(24px, 6.8vw, 75px) 0;
           box-sizing: border-box;
         }
 
         /* 4 Columns Grid */
         .gt-footer-grid {
           display: grid;
-          grid-template-columns: 1.55fr 1fr 1.25fr 1.35fr;
-          gap: clamp(28px, 4vw, 56px);
-          padding-bottom: 52px;
+          grid-template-columns: 1.4fr 1fr 1.15fr 1.35fr;
+          gap: clamp(24px, 3.5vw, 48px);
+          padding-bottom: 24px;
         }
 
         .gt-footer-brand-wrap {
           display: inline-flex;
           align-items: center;
-          gap: 12px;
+          gap: 14px;
           text-decoration: none;
         }
         .gt-footer-logo-img {
-          height: auto;
+          width: 68px;
+          height: 68px;
           object-fit: contain;
-          filter: drop-shadow(0 0 10px rgba(116, 79, 231, 0.9));
+          filter: drop-shadow(0 0 14px rgba(147, 95, 238, 0.8));
         }
         .gt-footer-brand-text {
-          width: 124px;
+          width: 170px;
           height: auto;
-          margin-left: 10px;
+          margin-left: 2px;
           object-fit: contain;
         }
 
         .gt-footer-brand-desc {
-          margin: 18px 0 0 0;
+          margin: 22px 0 0 0;
           font-family: 'Inter', sans-serif;
           font-size: 14.5px;
-          line-height: 1.65;
-          color: rgba(200, 192, 230, 0.75);
-          max-width: 260px;
+          line-height: 1.55;
+          color: rgba(225, 218, 245, 0.78);
+          max-width: 300px;
         }
 
         .gt-footer-col-title {
-          margin: 0 0 20px 0;
+          margin: 0 0 22px 0;
           font-family: 'Inter', sans-serif;
           font-weight: 600;
           font-size: 13.5px;
           line-height: 18px;
-          letter-spacing: 0.07em;
+          letter-spacing: 0.08em;
           text-transform: uppercase;
           color: #9B82F3;
         }
@@ -284,13 +279,13 @@ export default function Footer({ showCta = true }: FooterProps) {
           margin: 0;
           display: flex;
           flex-direction: column;
-          gap: 16px;
+          gap: 14px;
         }
         .gt-footer-links-list a {
           font-family: 'Inter', sans-serif;
           font-size: 15px;
-          line-height: 22px;
-          color: rgba(210, 204, 240, 0.82);
+          line-height: 1.4;
+          color: rgba(225, 218, 245, 0.85);
           text-decoration: none;
           transition: color 0.2s ease;
           display: inline-block;
@@ -302,7 +297,7 @@ export default function Footer({ showCta = true }: FooterProps) {
         .gt-footer-contacts-list {
           display: flex;
           flex-direction: column;
-          gap: 18px;
+          gap: 16px;
         }
         .gt-footer-contact-item {
           display: flex;
@@ -310,62 +305,79 @@ export default function Footer({ showCta = true }: FooterProps) {
           gap: 12px;
           font-family: 'Inter', sans-serif;
           font-size: 15px;
-          line-height: 22px;
-          color: rgba(210, 204, 240, 0.82);
+          line-height: 1.4;
+          color: rgba(225, 218, 245, 0.85);
           text-decoration: none;
         }
         .gt-footer-contact-item svg {
           flex-shrink: 0;
         }
         .gt-footer-email-link {
-          color: rgba(210, 204, 240, 0.82);
+          color: rgba(225, 218, 245, 0.85);
           text-decoration: underline;
-          text-underline-offset: 3px;
+          text-underline-offset: 3.5px;
           transition: color 0.2s ease;
         }
         .gt-footer-email-link:hover {
           color: #ffffff;
         }
 
-        /* ─── GELORA watermark: centered below grid, above bottom bar ─── */
+        /* ─── GELORA watermark: spanning full width below grid, overlapping bottom bar ─── */
         .gt-footer-watermark-wrap {
           position: relative;
           width: 100%;
-          height: clamp(90px, 16vw, 200px);
-          overflow: hidden;
+          height: clamp(120px, 18vw, 240px);
+          margin-top: 14px;
+          margin-bottom: -58px;
           display: flex;
           align-items: flex-end;
           justify-content: center;
           pointer-events: none;
           user-select: none;
+          overflow: hidden;
+          z-index: 1;
         }
         .gt-footer-watermark {
-          font-family: 'Inter', sans-serif;
-          font-weight: 700;
-          font-size: clamp(100px, 17vw, 260px);
-          line-height: 0.88;
-          letter-spacing: 0.01em;
-          color: #DFD7FF;
-          opacity: 0.045;
+          font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+          font-weight: 800;
+          font-size: clamp(84px, 17.5vw, 240px);
+          line-height: 0.84;
+          letter-spacing: clamp(0.04em, 1.2vw, 0.08em);
+          color: rgba(147, 95, 238, 0.088);
           white-space: nowrap;
-          margin-bottom: -0.08em;
+          margin-bottom: -0.04em;
+          display: block;
+          text-align: center;
+          width: 100%;
         }
 
         /* Bottom Bar */
-        .gt-footer-bottom {
+        .gt-footer-bottom-wrap {
           position: relative;
           z-index: 2;
-          max-width: 100%;
-          padding: 20px clamp(20px, 4vw, 48px);
-          border-top: 1px solid rgba(255, 255, 255, 0.07);
+          width: 100%;
+          box-sizing: border-box;
+        }
+        .gt-footer-bottom {
+          position: relative;
+          width: 100%;
+          max-width: 1440px;
+          margin: 0 auto;
+          box-sizing: border-box;
+          padding: 0 clamp(24px, 6.8vw, 75px) 28px;
+          border-top: none;
           display: flex;
           justify-content: space-between;
           align-items: center;
           flex-wrap: wrap;
           gap: 16px;
-          color: rgba(175, 165, 210, 0.6);
+          color: rgba(215, 206, 240, 0.65);
           font-family: 'Inter', sans-serif;
           font-size: 13.5px;
+        }
+        .gt-footer-bottom p {
+          margin: 0;
+          line-height: 1.5;
         }
         .gt-footer-legal-links {
           display: flex;
@@ -373,23 +385,65 @@ export default function Footer({ showCta = true }: FooterProps) {
           gap: 10px;
         }
         .gt-footer-legal-links a {
-          color: rgba(175, 165, 210, 0.6);
+          color: rgba(215, 206, 240, 0.65);
           text-decoration: none;
           transition: color 0.2s ease;
         }
         .gt-footer-legal-links a:hover {
-          color: #cfc8eb;
+          color: #ffffff;
         }
 
         /* ── Responsive ── */
+        /* Hide large GELORA watermark on mobile and tablet */
+        @media (max-width: 1024px) {
+          .gt-footer-watermark-wrap {
+            display: none !important;
+          }
+          .gt-footer-bottom-wrap {
+            border-top: 1px solid rgba(167, 139, 250, 0.12);
+            padding-top: 24px;
+            margin-top: 24px;
+          }
+        }
+
         @media (max-width: 960px) {
           .gt-footer-grid { grid-template-columns: 1fr 1fr; gap: 40px; }
         }
-        @media (max-width: 580px) {
-          .gt-footer-grid { grid-template-columns: 1fr; gap: 36px; }
-          .gt-footer-bottom { flex-direction: column; align-items: flex-start; }
-          .gt-cta-btns { flex-direction: column; width: 100%; }
-          .gt-cta-talk-btn, .gt-cta-explore-btn { width: 100%; }
+
+        @media (max-width: 640px) {
+          .gt-cta-btns {
+            flex-direction: column;
+            width: 100%;
+            max-width: 360px;
+            margin: 0 auto;
+            gap: 14px;
+          }
+          .gt-cta-talk-btn {
+            width: 100%;
+            justify-content: center;
+            gap: 12px;
+            padding: 4px 16px;
+          }
+          .gt-cta-explore-btn {
+            width: 100%;
+            justify-content: center;
+          }
+          .gt-footer-grid {
+            grid-template-columns: 1fr;
+            gap: 32px;
+          }
+          .gt-footer-bottom {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 14px;
+            padding: 0 clamp(24px, 6.8vw, 75px) 32px;
+          }
+          .gt-footer-legal-links {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+          }
         }
       `}</style>
 
@@ -459,11 +513,11 @@ export default function Footer({ showCta = true }: FooterProps) {
             {/* Brand */}
             <div className="gt-footer-col">
               <Link href="/" className="gt-footer-brand-wrap">
-                <Image src="/asset/logo.png" alt="Gelora Tech" width={34} height={34} className="gt-footer-logo-img" />
-                <Image src="/asset/gtText.png" alt="Gelora Tech" width={124} height={42} className="gt-footer-brand-text" />
+                <Image src="/asset/logo.png" alt="Gelora Tech" width={58} height={58} className="gt-footer-logo-img" />
+                <Image src="/asset/gtText.png" alt="Gelora Tech" width={162} height={42} className="gt-footer-brand-text" />
               </Link>
               <p className="gt-footer-brand-desc">
-                Strategy, design, and technology working together to create impact.
+                Strategy, design, and technology<br />working together to create impact.
               </p>
             </div>
 
@@ -473,9 +527,9 @@ export default function Footer({ showCta = true }: FooterProps) {
               <ul className="gt-footer-links-list">
                 <li><Link href="/">Home</Link></li>
                 <li><Link href="/services">Services</Link></li>
+                <li><Link href="/product">Products</Link></li>
                 <li><Link href="/about">About</Link></li>
                 <li><Link href="/careers">Careers</Link></li>
-                <li><Link href="/product">Products</Link></li>
               </ul>
             </div>
 
@@ -496,26 +550,22 @@ export default function Footer({ showCta = true }: FooterProps) {
               <h4 className="gt-footer-col-title">LET&apos;S CONNECT</h4>
               <div className="gt-footer-contacts-list">
                 <a href="mailto:hello@geloratech.com" className="gt-footer-contact-item">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9B82F3" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#9B82F3" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <rect width="20" height="16" x="2" y="4" rx="2" />
                     <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
                   </svg>
                   <span className="gt-footer-email-link">hello@geloratech.com</span>
                 </a>
                 <div className="gt-footer-contact-item">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9B82F3" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#9B82F3" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <polyline points="23 7 23 1 17 1" />
+                    <line x1="16" y1="8" x2="23" y2="1" />
                     <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
                   </svg>
-                  <span>+91 XXXXX XXXXX</span>
+                  <span>+91 - 7976143735</span>
                 </div>
                 <div className="gt-footer-contact-item">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9B82F3" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
-                  </svg>
-                  <span>+91 XXXXX XXXXX</span>
-                </div>
-                <div className="gt-footer-contact-item">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9B82F3" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#9B82F3" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0" />
                     <circle cx="12" cy="10" r="3" />
                   </svg>
@@ -524,20 +574,22 @@ export default function Footer({ showCta = true }: FooterProps) {
               </div>
             </div>
           </div>
-
-          {/* GELORA watermark — centered below the grid links */}
-          <div className="gt-footer-watermark-wrap" aria-hidden="true">
-            <span className="gt-footer-watermark">GELORA</span>
-          </div>
         </div>
 
-        {/* Bottom bar — full width */}
-        <div className="gt-footer-bottom">
-          <p>© 2026 Gelora Tech. All Rights Reserved.</p>
-          <div className="gt-footer-legal-links">
-            <Link href="/privacy">Privacy Policy</Link>
-            <span>·</span>
-            <Link href="/terms">Terms &amp; Conditions</Link>
+        {/* GELORA watermark — spanning full width below the grid */}
+        <div className="gt-footer-watermark-wrap" aria-hidden="true">
+          <span className="gt-footer-watermark">G E L O R A</span>
+        </div>
+
+        {/* Bottom bar — spanning edge to edge matching Figma design */}
+        <div className="gt-footer-bottom-wrap">
+          <div className="gt-footer-bottom">
+            <p>© 2026 Gelora Tech. All Rights Reserved.</p>
+            <div className="gt-footer-legal-links">
+              <Link href="/privacy">Privacy Policy</Link>
+              <span>·</span>
+              <Link href="/terms">Terms &amp; Conditions</Link>
+            </div>
           </div>
         </div>
       </footer>

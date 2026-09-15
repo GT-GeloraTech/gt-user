@@ -122,6 +122,9 @@ export default function HomePage() {
   const [activeStepIndex, setActiveStepIndex] = useState(0);
   const activeStepRef = useRef(0);
 
+  // 'forward' = going to a higher step (cards slide left), 'backward' = going lower (cards slide right)
+  const [slideDir, setSlideDir] = useState<'forward' | 'backward' | 'none'>('none');
+
   const wheelCooldown = useRef(false);
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
@@ -163,6 +166,7 @@ export default function HomePage() {
     if (processTimer.current) clearInterval(processTimer.current);
     if (typeof window !== "undefined" && window.innerWidth <= 1024) {
       processTimer.current = setInterval(() => {
+        setSlideDir('forward');
         setActiveStepIndex((prev) => {
           const next = (prev + 1) % PROCESS_STEPS.length;
           activeStepRef.current = next;
@@ -173,6 +177,7 @@ export default function HomePage() {
   }, []);
 
   const handleProcessNext = useCallback(() => {
+    setSlideDir('forward');
     setActiveStepIndex((prev) => {
       const next = (prev + 1) % PROCESS_STEPS.length;
       activeStepRef.current = next;
@@ -182,6 +187,7 @@ export default function HomePage() {
   }, [resetProcessTimer]);
 
   const handleProcessPrev = useCallback(() => {
+    setSlideDir('backward');
     setActiveStepIndex((prev) => {
       const next = (prev - 1 + PROCESS_STEPS.length) % PROCESS_STEPS.length;
       activeStepRef.current = next;
@@ -191,6 +197,7 @@ export default function HomePage() {
   }, [resetProcessTimer]);
 
   const handleProcessSelect = useCallback((idx: number) => {
+    setSlideDir(idx >= activeStepRef.current ? 'forward' : 'backward');
     activeStepRef.current = idx;
     setActiveStepIndex(idx);
     resetProcessTimer();
@@ -200,6 +207,7 @@ export default function HomePage() {
    * Helpers
    * ─────────────────────────────────────────────────────── */
   const goToStep = useCallback((idx: number) => {
+    setSlideDir(idx > activeStepRef.current ? 'forward' : 'backward');
     activeStepRef.current = idx;
     setActiveStepIndex(idx);
     resetProcessTimer();
@@ -305,7 +313,7 @@ export default function HomePage() {
       wheelCooldown.current = true;
       setTimeout(() => {
         wheelCooldown.current = false;
-      }, 550);
+      }, 950);
 
       const goingDown = e.deltaY > 0;
       const cur = activeStepRef.current;
@@ -873,7 +881,7 @@ export default function HomePage() {
         .about-tile {
           position: relative;
           overflow: hidden;
-          border-radius: 24px;
+          border-radius: 28px;
           box-shadow: 0 12px 30px rgba(94, 75, 142, 0.15);
         }
 
@@ -917,7 +925,7 @@ export default function HomePage() {
 
         /* Future-Ready: 100% + title aligned with card content */
         .about-future .tile-content {
-          padding: 34px 0 0 calc(49 / 603 * 100%);
+          padding: 40px 0 0 calc(49 / 603 * 100%);
           justify-content: flex-start;
           align-items: flex-start;
         }
@@ -943,7 +951,7 @@ export default function HomePage() {
 
         /* Engineers tile content */
         .about-engineers .tile-content {
-          padding: 36px 32px;
+          padding: 40px 32px;
           justify-content: flex-start;
         }
 
@@ -979,10 +987,10 @@ export default function HomePage() {
           user-select: none;
           display: block;
 
-          /* Proportional sizing variables matching Figma proportions */
-          --card-w: clamp(320px, 29vw, 440px);
-          --card-h: clamp(420px, 38vw, 530px);
-          --peek-w: clamp(100px, 10.5vw, 150px);
+          /* Proportional sizing variables matching Figma proportions - slightly more compact */
+          --card-w: clamp(295px, 26vw, 395px);
+          --card-h: clamp(385px, 34vw, 480px);
+          --peek-w: clamp(80px, 9vw, 130px);
           --edge-pad: clamp(48px, 6.8vw, 98px);
         }
 
@@ -1102,6 +1110,7 @@ export default function HomePage() {
         }
 
         /* Left Peek Card: slim peek width matching Figma */
+        /* Left Peek Card: slim peek width matching Figma */
         .process-card-peek-left-figma {
           box-sizing: border-box;
           position: absolute;
@@ -1119,12 +1128,41 @@ export default function HomePage() {
           cursor: pointer;
           pointer-events: none;
           z-index: 4;
-          transition: opacity 0.45s ease, transform 0.3s ease, border-color 0.3s ease;
+          transition: opacity 0.75s ease, border-color 0.3s ease;
         }
         .process-card-peek-left-figma.is-visible {
           opacity: 0.85;
           pointer-events: auto;
         }
+        /* Slow slide animations on left rectangle */
+        .process-card-peek-left-figma.is-visible.slide-forward {
+          animation: peekLeftSlideForward 0.95s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+        }
+        .process-card-peek-left-figma.is-visible.slide-backward {
+          animation: peekLeftSlideBackward 0.95s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+        }
+
+        @keyframes peekLeftSlideForward {
+          0% {
+            transform: translateY(-50%) translateX(min(180px, 14vw));
+            opacity: 0.15;
+          }
+          100% {
+            transform: translateY(-50%) translateX(0);
+            opacity: 0.85;
+          }
+        }
+        @keyframes peekLeftSlideBackward {
+          0% {
+            transform: translateY(-50%) translateX(max(-220px, -16vw));
+            opacity: 0;
+          }
+          100% {
+            transform: translateY(-50%) translateX(0);
+            opacity: 0.85;
+          }
+        }
+
         .process-card-peek-left-figma:hover {
           opacity: 1;
           border-color: rgba(160, 120, 255, 0.85);
@@ -1149,12 +1187,41 @@ export default function HomePage() {
           cursor: pointer;
           pointer-events: none;
           z-index: 4;
-          transition: opacity 0.45s ease, transform 0.3s ease, border-color 0.3s ease;
+          transition: opacity 0.75s ease, border-color 0.3s ease;
         }
         .process-card-peek-right-figma.is-visible {
           opacity: 0.85;
           pointer-events: auto;
         }
+        /* Slow slide animations on right rectangle */
+        .process-card-peek-right-figma.is-visible.slide-forward {
+          animation: peekRightSlideForward 0.95s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+        }
+        .process-card-peek-right-figma.is-visible.slide-backward {
+          animation: peekRightSlideBackward 0.95s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+        }
+
+        @keyframes peekRightSlideForward {
+          0% {
+            transform: translateY(-50%) translateX(min(220px, 16vw));
+            opacity: 0;
+          }
+          100% {
+            transform: translateY(-50%) translateX(0);
+            opacity: 0.85;
+          }
+        }
+        @keyframes peekRightSlideBackward {
+          0% {
+            transform: translateY(-50%) translateX(max(-180px, -14vw));
+            opacity: 0.15;
+          }
+          100% {
+            transform: translateY(-50%) translateX(0);
+            opacity: 0.85;
+          }
+        }
+
         .process-card-peek-right-figma:hover {
           opacity: 1;
           border-color: rgba(160, 120, 255, 0.85);
@@ -1189,24 +1256,46 @@ export default function HomePage() {
           display: flex;
           flex-direction: column;
           justify-content: space-between;
-          transition: opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1), transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.5s;
+          /* Slow, elegant horizontal slideshow transition */
+          transition: opacity 0.95s cubic-bezier(0.22, 1, 0.36, 1),
+                      transform 0.95s cubic-bezier(0.22, 1, 0.36, 1),
+                      visibility 0s linear 0.95s;
         }
         .process-center-card.is-active {
           opacity: 1;
           visibility: visible;
-          transform: scale(1);
+          transform: translateX(0) scale(1);
           pointer-events: auto;
+          transition: opacity 0.95s cubic-bezier(0.22, 1, 0.36, 1),
+                      transform 0.95s cubic-bezier(0.22, 1, 0.36, 1),
+                      visibility 0s linear 0s;
         }
-        .process-center-card.is-passed {
+
+        /* Going FORWARD (step 1→2→3→4): outgoing card slides LEFT, incoming enters from RIGHT */
+        .slide-forward .process-center-card.is-passed {
           opacity: 0;
           visibility: hidden;
-          transform: scale(0.96) translateX(-24px);
+          transform: translateX(-115%) scale(0.92);
           pointer-events: none;
         }
-        .process-center-card.is-incoming {
+        .slide-forward .process-center-card.is-incoming {
           opacity: 0;
           visibility: hidden;
-          transform: scale(1.02) translateX(24px);
+          transform: translateX(115%) scale(0.92);
+          pointer-events: none;
+        }
+
+        /* Going BACKWARD (step 4→3→2→1): outgoing card slides RIGHT, incoming enters from LEFT */
+        .slide-backward .process-center-card.is-passed {
+          opacity: 0;
+          visibility: hidden;
+          transform: translateX(115%) scale(0.92);
+          pointer-events: none;
+        }
+        .slide-backward .process-center-card.is-incoming {
+          opacity: 0;
+          visibility: hidden;
+          transform: translateX(-115%) scale(0.92);
           pointer-events: none;
         }
 
@@ -1229,20 +1318,20 @@ export default function HomePage() {
           transition: transform 0.5s ease;
         }
         .process-card-image.step-img-1 {
-          width: 82%;
+          width: 85%;
           opacity: 0.96;
         }
         .process-card-image.step-img-2 {
-          width: 78%;
+          width: 85%;
           transform: rotate(7.94deg);
           opacity: 0.96;
         }
         .process-card-image.step-img-3 {
-          width: 76%;
+          width: 85%;
           opacity: 0.96;
         }
         .process-card-image.step-img-4 {
-          width: 72%;
+          width: 85%;
           opacity: 0.96;
         }
 
@@ -1675,16 +1764,6 @@ export default function HomePage() {
 
           {/* Arrows + Dots */}
           <div className="hero-carousel-arrows">
-            <button
-              type="button"
-              className="hero-carousel-arrow"
-              aria-label="Previous card"
-              onClick={() => { carouselPrev(); resetCarouselTimer(); }}
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="15 18 9 12 15 6" />
-              </svg>
-            </button>
 
             <div className="hero-carousel-dots" role="tablist" aria-label="Card indicators">
               {CARDS_DATA.map((card, i) => (
@@ -1700,16 +1779,6 @@ export default function HomePage() {
               ))}
             </div>
 
-            <button
-              type="button"
-              className="hero-carousel-arrow"
-              aria-label="Next card"
-              onClick={() => { carouselNext(); resetCarouselTimer(); }}
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="9 18 15 12 9 6" />
-              </svg>
-            </button>
           </div>
         </div>
       </section>
@@ -1780,7 +1849,7 @@ export default function HomePage() {
       {/* ── Process Section ("How We Work") ── */}
       <section
         ref={sectionRef}
-        className="process-section"
+        className={`process-section slide-${slideDir}`}
         id="process"
         aria-label="How we work process"
         onTouchStart={handleTouchStart}
@@ -1803,7 +1872,8 @@ export default function HomePage() {
 
         {/* Left Peek Card (Rectangle 178) - visible on step 02, 03, 04 */}
         <div
-          className={`process-card-peek-left-figma ${activeStepIndex > 0 ? "is-visible" : ""}`}
+          key={`peek-left-${activeStepIndex}`}
+          className={`process-card-peek-left-figma ${activeStepIndex > 0 ? "is-visible" : ""} slide-${slideDir}`}
           onClick={() => {
             if (activeStepIndex > 0) goToStep(activeStepIndex - 1);
           }}
@@ -1814,7 +1884,8 @@ export default function HomePage() {
 
         {/* Right Peek Card (Rectangle 177) - visible on step 01, 02, 03 */}
         <div
-          className={`process-card-peek-right-figma ${activeStepIndex < totalSteps - 1 ? "is-visible" : ""}`}
+          key={`peek-right-${activeStepIndex}`}
+          className={`process-card-peek-right-figma ${activeStepIndex < totalSteps - 1 ? "is-visible" : ""} slide-${slideDir}`}
           onClick={() => {
             if (activeStepIndex < totalSteps - 1) goToStep(activeStepIndex + 1);
           }}
@@ -1883,16 +1954,6 @@ export default function HomePage() {
 
         {/* Mobile & Tablet Navigation Controls: Below the Card */}
         <div className="process-mobile-nav" aria-label="Process steps navigation">
-          <button
-            type="button"
-            className="process-mobile-arrow process-mobile-prev"
-            onClick={handleProcessPrev}
-            aria-label="Previous step"
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="15 18 9 12 15 6" />
-            </svg>
-          </button>
 
           <div className="process-mobile-dots" role="tablist" aria-label="Process steps">
             {PROCESS_STEPS.map((s, idx) => (
@@ -1908,16 +1969,6 @@ export default function HomePage() {
             ))}
           </div>
 
-          <button
-            type="button"
-            className="process-mobile-arrow process-mobile-next"
-            onClick={handleProcessNext}
-            aria-label="Next step"
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="9 18 15 12 9 6" />
-            </svg>
-          </button>
         </div>
       </section>
 
