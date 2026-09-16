@@ -33,6 +33,8 @@ export default function Header({ activeTab, onTabChange }: HeaderProps) {
   const [selected, setSelected] = useState(activeTab || "Home");
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [isLightBg, setIsLightBg] = useState(false);
 
   const navPillRef = useRef<HTMLElement>(null);
   const navItemRefs = useRef<(HTMLAnchorElement | null)[]>([]);
@@ -43,7 +45,9 @@ export default function Header({ activeTab, onTabChange }: HeaderProps) {
   const [pillReady, setPillReady] = useState(false);
   const [isMelting, setIsMelting] = useState(false);
   const [isSolidifying, setIsSolidifying] = useState(false);
+  const [meltDirection, setMeltDirection] = useState<"right" | "left">("right");
   const meltTimersRef = useRef<NodeJS.Timeout[]>([]);
+  const targetHrefRef = useRef<string | null>(null);
 
   // `selected` takes priority so the active style immediately follows the click,
   // not the pathname (which only changes after router.push fires).
@@ -67,6 +71,52 @@ export default function Header({ activeTab, onTabChange }: HeaderProps) {
     document.title = PAGE_TITLES[pathname] || "Gelora Tech";
   }, [pathname]);
 
+  // Detect if the header is over a light (white/cream) background section
+  useEffect(() => {
+    const detectBg = () => {
+      try {
+        // Sample the area just below the header (around y=80px)
+        const sampleY = 80;
+        const sampleX = window.innerWidth / 2;
+        const elements = document.elementsFromPoint(sampleX, sampleY) as HTMLElement[];
+        for (const el of elements) {
+          // Skip the header itself and its children
+          if (el.closest('header')) continue;
+          const bg = window.getComputedStyle(el).backgroundColor;
+          if (!bg || bg === 'transparent' || bg === 'rgba(0, 0, 0, 0)') continue;
+          // Parse RGB values
+          const m = bg.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+          if (!m) continue;
+          const r = parseInt(m[1]), g = parseInt(m[2]), b = parseInt(m[3]);
+          // Perceived luminance formula
+          const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+          setIsLightBg(luminance > 0.6);
+          return;
+        }
+        setIsLightBg(false);
+      } catch {
+        setIsLightBg(false);
+      }
+    };
+
+    detectBg();
+    window.addEventListener('scroll', detectBg, { passive: true });
+    window.addEventListener('resize', detectBg, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', detectBg);
+      window.removeEventListener('resize', detectBg);
+    };
+  }, [pathname]);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 20);
+    };
+    handleScroll();
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
   // Clean up any ongoing timers on unmount
   useEffect(() => {
     return () => {
@@ -83,14 +133,26 @@ export default function Header({ activeTab, onTabChange }: HeaderProps) {
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Re-snap when pathname changes (e.g. browser back/forward, but NOT during a melt animation)
+  // Re-snap when pathname changes (e.g. browser back/forward, footer navigation)
   useEffect(() => {
-    if (isMelting || isSolidifying) return;
-    if (currentTab) {
-      repositionPill(currentTab);
+    // If a tab click animation is currently navigating towards targetHref,
+    // only clear targetHref once pathname matches targetHref
+    if (targetHrefRef.current) {
+      if (pathname === targetHrefRef.current) {
+        targetHrefRef.current = null;
+      } else {
+        // Still transitioning towards targetHref, do not snap back to old pathname!
+        return;
+      }
+    }
+
+    const matched = NAV_ITEMS.find((item) => item.href === pathname)?.name;
+    if (matched) {
+      setSelected(matched);
+      repositionPill(matched);
       setPillReady(true);
     }
-  }, [pathname, currentTab, repositionPill, isMelting, isSolidifying]);
+  }, [pathname, repositionPill]);
 
   // Handle window resize so pill stays aligned with active tab
   useEffect(() => {
@@ -116,6 +178,8 @@ export default function Header({ activeTab, onTabChange }: HeaderProps) {
 
       if (name === currentTab) return;
 
+      targetHrefRef.current = href;
+
       // Clear any previous running timers
       meltTimersRef.current.forEach(clearTimeout);
       meltTimersRef.current = [];
@@ -137,54 +201,39 @@ export default function Header({ activeTab, onTabChange }: HeaderProps) {
       }
 
       const pr = pill.getBoundingClientRect();
-      const rFrom = elFrom.getBoundingClientRect();
       const rTo = elTo.getBoundingClientRect();
 
-      const leftFrom = rFrom.left - pr.left;
-      const widthFrom = rFrom.width;
       const leftTo = rTo.left - pr.left;
       const widthTo = rTo.width;
+      const dir = toIdx > fromIdx ? "right" : "left";
+      setMeltDirection(dir);
 
-      // ── Step 1: Active bg melts into molten fluid and stretches horizontally side-by-side towards new tab ──
+      // ── Step 1: Active bg melts into molten fluid and glides slowly & smoothly to target tab ──
+      // The pill maintains its tab size and glides continuously across without stretching over intermediate tabs
       setIsMelting(true);
       setIsSolidifying(false);
 
-      if (toIdx > fromIdx) {
-        // Moving right: left stays at previous tab, width stretches across to target tab
-        setPillLeft(leftFrom);
-        setPillWidth((leftTo + widthTo) - leftFrom);
-      } else {
-        // Moving left: left moves to target tab, width spans across to previous right edge
-        const rightFrom = leftFrom + widthFrom;
-        setPillLeft(leftTo);
-        setPillWidth(rightFrom - leftTo);
-      }
+      setPillLeft(leftTo);
+      setPillWidth(widthTo);
 
-      // ── Step 2: The molten tail slowly catches up into the target tab ──
-      const tCatchUp = setTimeout(() => {
-        setPillLeft(leftTo);
-        setPillWidth(widthTo);
-      }, 440);
-      meltTimersRef.current.push(tCatchUp);
-
-      // ── Step 3: Cools down & solidifies cleanly into the target tab ──
+      // ── Step 2: Arrives slowly, cools down & solidifies cleanly into target tab ──
       const tSolidify = setTimeout(() => {
         setIsMelting(false);
         setIsSolidifying(true);
-      }, 880);
+      }, 920);
       meltTimersRef.current.push(tSolidify);
+
+      // ── Step 3: Cleanup solidifying bounce state once settled ──
+      const tCleanup = setTimeout(() => {
+        setIsSolidifying(false);
+      }, 1340);
+      meltTimersRef.current.push(tCleanup);
 
       // ── Step 4: Route navigates once the slow, smooth molten flow finishes ──
       const tNav = setTimeout(() => {
         router.push(href);
-      }, 1080);
+      }, 1420);
       meltTimersRef.current.push(tNav);
-
-      // Cleanup
-      const tCleanup = setTimeout(() => {
-        setIsSolidifying(false);
-      }, 1300);
-      meltTimersRef.current.push(tCleanup);
     },
     [currentTab, onTabChange, repositionPill, router]
   );
@@ -235,7 +284,7 @@ export default function Header({ activeTab, onTabChange }: HeaderProps) {
           </div>
           <div style={{ display: "flex", flexDirection: "column", padding: "20px 16px", gap: "6px", flex: 1 }}>
             {NAV_ITEMS.map((item) => {
-              const isActive = currentTab === item.name || (item.href !== "/" && pathname?.startsWith(item.href));
+              const isActive = currentTab === item.name;
               return (
                 <Link
                   key={item.name}
@@ -267,6 +316,31 @@ export default function Header({ activeTab, onTabChange }: HeaderProps) {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
+        /* ── Fixed Header Bar (Transparent background per user request) ── */
+        header.hdr-fixed-header {
+          background: transparent !important;
+          backdrop-filter: none !important;
+          -webkit-backdrop-filter: none !important;
+          border-bottom: none !important;
+          box-shadow: none !important;
+          transition: opacity 0.35s ease, transform 0.35s ease;
+          pointer-events: auto !important;
+        }
+
+        header.hdr-fixed-header.scrolled {
+          background: transparent !important;
+          backdrop-filter: none !important;
+          -webkit-backdrop-filter: none !important;
+          border-bottom: none !important;
+          box-shadow: none !important;
+        }
+
+        html.viewport-locked header.hdr-fixed-header {
+          opacity: 0;
+          pointer-events: none !important;
+          transform: translateY(-8px);
+        }
+
         .hdr-brand-link {
           display: flex; align-items: center; gap: 12px;
           text-decoration: none; user-select: none; flex-shrink: 0;
@@ -285,13 +359,15 @@ export default function Header({ activeTab, onTabChange }: HeaderProps) {
           object-fit: contain; filter: drop-shadow(0 0 8px rgba(191,239,255,0.35));
         }
 
-        /* ── Nav pill container ── */
+        /* ── Nav pill container (Consistent dark glass pill like Image 1 everywhere) ── */
         .hdr-nav-pill {
           position: relative;
           box-sizing: border-box;
           width: min(540px, 48vw);
           height: 48px;
-          background: rgba(255,255,255,0.1);
+          background: rgba(18, 12, 45, 0.72);
+          border: 1px solid rgba(255, 255, 255, 0.14);
+          box-shadow: 0 4px 20px rgba(4, 2, 18, 0.4);
           border-radius: 355px;
           backdrop-filter: blur(24px);
           -webkit-backdrop-filter: blur(24px);
@@ -309,30 +385,49 @@ export default function Header({ activeTab, onTabChange }: HeaderProps) {
           top: 5px;
           height: 38px;
           border-radius: 24px;
-          background: linear-gradient(180deg, rgba(140,103,255,0.18) 0%, rgba(160,120,255,0.26) 100%);
-          border: 1px solid rgba(255,255,255,0.26);
+          background: linear-gradient(180deg, rgba(140,103,255,0.22) 0%, rgba(160,120,255,0.32) 100%);
+          border: 1px solid rgba(255,255,255,0.28);
           backdrop-filter: blur(2px);
           -webkit-backdrop-filter: blur(2px);
-          box-shadow: 0 2px 16px rgba(100,60,220,0.22), inset 0 1px 0 rgba(255,255,255,0.14);
+          box-shadow: 0 2px 16px rgba(100,60,220,0.25), inset 0 1px 0 rgba(255,255,255,0.18);
           pointer-events: none;
           z-index: 1;
           /* No transition by default to prevent animation from the left on page mount */
           transition: none;
         }
 
-        /* Molten liquid state: melts horizontally and flows across to next tab */
+        .hdr-sliding-pill.ready {
+          transition:
+            left   0.92s cubic-bezier(0.25, 0.85, 0.25, 1),
+            width  0.92s cubic-bezier(0.25, 0.85, 0.25, 1),
+            background 0.45s ease,
+            box-shadow 0.45s ease,
+            border-color 0.45s ease;
+        }
+
+        /* Molten liquid state: melts and glows while gliding smoothly between tabs */
         .hdr-sliding-pill.melting {
           transition:
-            left   0.45s cubic-bezier(0.25, 0.85, 0.25, 1),
-            width  0.45s cubic-bezier(0.25, 0.85, 0.25, 1),
-            background 0.35s ease,
-            box-shadow 0.35s ease,
-            border-color 0.35s ease;
+            left   0.92s cubic-bezier(0.25, 0.85, 0.25, 1),
+            width  0.92s cubic-bezier(0.25, 0.85, 0.25, 1),
+            background 0.45s ease,
+            box-shadow 0.45s ease,
+            border-color 0.45s ease;
           background: linear-gradient(90deg, rgba(168,85,247,0.5) 0%, rgba(216,180,254,0.78) 50%, rgba(168,85,247,0.5) 100%);
           border: 1.5px solid rgba(233,213,255,0.6);
-          box-shadow: 0 0 26px rgba(168,85,247,0.75), inset 0 1px 2px rgba(255,255,255,0.6);
+          box-shadow: 0 0 28px rgba(168,85,247,0.8), inset 0 1px 2px rgba(255,255,255,0.65);
           border-radius: 20px;
           filter: blur(0.3px);
+        }
+
+        .hdr-sliding-pill.melting.dir-right {
+          background: linear-gradient(90deg, rgba(147,51,234,0.2) 0%, rgba(192,132,252,0.65) 55%, rgba(233,213,255,0.92) 100%);
+          box-shadow: -12px 0 28px rgba(168,85,247,0.7), 0 0 24px rgba(168,85,247,0.65), inset 0 1px 2px rgba(255,255,255,0.7);
+        }
+
+        .hdr-sliding-pill.melting.dir-left {
+          background: linear-gradient(270deg, rgba(147,51,234,0.2) 0%, rgba(192,132,252,0.65) 55%, rgba(233,213,255,0.92) 100%);
+          box-shadow: 10px 0 28px rgba(168,85,247,0.7), 0 0 24px rgba(168,85,247,0.65), inset 0 1px 2px rgba(255,255,255,0.7);
         }
 
         /* Solidifies upon landing at the switched tab */
@@ -354,7 +449,7 @@ export default function Header({ activeTab, onTabChange }: HeaderProps) {
           font-weight: 400;
           font-size: 15px;
           line-height: 18px;
-          color: rgba(255,255,255,0.75);
+          color: rgba(255,255,255,0.78);
           text-decoration: none;
           display: inline-flex;
           align-items: center;
@@ -367,10 +462,22 @@ export default function Header({ activeTab, onTabChange }: HeaderProps) {
           border-radius: 24px;
           z-index: 2;
           cursor: pointer;
-          transition: color 0.22s ease;
+          transition: color 0.3s ease;
         }
-        .hdr-nav-item:hover { color: rgba(255,255,255,0.95); }
+        .hdr-nav-item:hover { color: #ffffff; }
         .hdr-nav-item.active { font-weight: 600; color: #ffffff; }
+
+        /* ── Light background mode: tabs turn dark/black ── */
+        .hdr-nav-pill.light-mode .hdr-nav-item {
+          color: rgba(20, 10, 50, 0.72);
+        }
+        .hdr-nav-pill.light-mode .hdr-nav-item:hover {
+          color: rgba(20, 10, 50, 1);
+        }
+        .hdr-nav-pill.light-mode .hdr-nav-item.active {
+          color: #0f0824;
+          font-weight: 600;
+        }
 
         /* ── Let's Talk ── */
         .hdr-talk-cta {
@@ -423,7 +530,8 @@ export default function Header({ activeTab, onTabChange }: HeaderProps) {
           .hdr-nav-item   { font-size: 13.5px; padding: 0 4px; }
         }
         @media (max-width: 760px) {
-          header { min-height: 56px !important; }
+          .hdr-fixed-header { min-height: 56px !important; }
+          .hdr-header-inner { padding-top: 12px !important; min-height: 56px !important; }
           .hdr-menu-toggle { display: flex; }
           .hdr-nav-pill    { display: none !important; }
           .hdr-talk-cta   { display: none; }
@@ -437,79 +545,99 @@ export default function Header({ activeTab, onTabChange }: HeaderProps) {
       {drawerPortal}
 
       <header
+        className={`hdr-fixed-header${isScrolled ? " scrolled" : ""}`}
         style={{
-          position: "relative", width: "100%", maxWidth: "1440px",
-          margin: "0 auto", boxSizing: "border-box", minHeight: "64px",
-          display: "flex", alignItems: "center", justifyContent: "space-between",
-          gap: "24px", padding: "0 clamp(20px, 4vw, 50px)", zIndex: 50,
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          width: "100%",
+          zIndex: 1000,
         }}
       >
-        {/* Brand */}
-        <Link href="/" className="hdr-brand-link">
-          <Image src="/asset/logo.png" alt="Gelora Tech" width={34} height={34} priority className="hdr-logo-glow" />
-          <Image src="/asset/gtText.png" alt="Gelora Tech" width={124} height={42} className="hdr-brand-text" />
-        </Link>
-
-        {/* Desktop nav */}
-        <nav
-          ref={navPillRef as React.RefObject<HTMLElement>}
-          className="hdr-nav-pill"
-          aria-label="Main Navigation"
+        <div
+          className="hdr-header-inner"
+          style={{
+            position: "relative",
+            width: "100%",
+            maxWidth: "1440px",
+            margin: "0 auto",
+            boxSizing: "border-box",
+            minHeight: "64px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: "24px",
+            padding: isScrolled ? "12px clamp(20px, 4vw, 50px)" : "16px clamp(20px, 4vw, 50px)",
+            transition: "padding 0.3s ease",
+          }}
         >
-          {/* Active Background Pill (melts and moves slowly side-by-side) */}
-          <div
-            className={`hdr-sliding-pill${isMelting ? " melting" : ""}${isSolidifying ? " solidifying" : ""}`}
-            style={{
-              left: pillLeft,
-              width: pillWidth,
-              opacity: pillReady ? 1 : 0,
-              visibility: pillReady ? "visible" : "hidden",
-            }}
-            aria-hidden="true"
-          />
+          {/* Brand */}
+          <Link href="/" className="hdr-brand-link">
+            <Image src="/asset/logo.png" alt="Gelora Tech" width={34} height={34} priority className="hdr-logo-glow" />
+            <Image src="/asset/gtText.png" alt="Gelora Tech" width={124} height={42} className="hdr-brand-text" />
+          </Link>
 
-          {NAV_ITEMS.map((item, idx) => {
-            const isActive =
-              currentTab === item.name ||
-              (item.href !== "/" && pathname?.startsWith(item.href));
-            return (
-              <Link
-                key={item.name}
-                href={item.href}
-                ref={(el) => { navItemRefs.current[idx] = el; }}
-                onClick={(e) => handleNavClick(item.name, item.href, e)}
-                className={`hdr-nav-item${isActive ? " active" : ""}`}
-              >
-                {item.name}
-              </Link>
-            );
-          })}
-        </nav>
+          {/* Desktop nav */}
+          <nav
+            ref={navPillRef as React.RefObject<HTMLElement>}
+            className={`hdr-nav-pill${isLightBg ? ' light-mode' : ''}`}
+            aria-label="Main Navigation"
+          >
+            {/* Active Background Pill (melts and moves slowly side-by-side) */}
+            <div
+              className={`hdr-sliding-pill${pillReady ? " ready" : ""}${isMelting ? ` melting dir-${meltDirection}` : ""}${isSolidifying ? " solidifying" : ""}`}
+              style={{
+                left: pillLeft,
+                width: pillWidth,
+                opacity: pillReady ? 1 : 0,
+                visibility: pillReady ? "visible" : "hidden",
+              }}
+              aria-hidden="true"
+            />
 
-        {/* Hamburger (mobile) */}
-        <button
-          type="button" className="hdr-menu-toggle"
-          aria-label="Open navigation menu"
-          aria-expanded={isMenuOpen}
-          onClick={() => setIsMenuOpen((o) => !o)}
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
-            <line x1="3" y1="7" x2="21" y2="7" />
-            <line x1="3" y1="12" x2="21" y2="12" />
-            <line x1="3" y1="17" x2="21" y2="17" />
-          </svg>
-        </button>
+            {NAV_ITEMS.map((item, idx) => {
+              const isActive = currentTab === item.name;
+              return (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  ref={(el) => { navItemRefs.current[idx] = el; }}
+                  onClick={(e) => handleNavClick(item.name, item.href, e)}
+                  className={`hdr-nav-item${isActive ? " active" : ""}`}
+                >
+                  {item.name}
+                </Link>
+              );
+            })}
+          </nav>
 
-        {/* Let's Talk (desktop) */}
-        <Link href="/about" className="hdr-talk-cta">
-          <span className="hdr-talk-text">Let&apos;s Talk</span>
-          <div className="hdr-talk-arrow">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="7" y1="17" x2="17" y2="7" />
-              <polyline points="7 7 17 7 17 17" />
+          {/* Hamburger (mobile) */}
+          <button
+            type="button"
+            className="hdr-menu-toggle"
+            aria-label="Open navigation menu"
+            aria-expanded={isMenuOpen}
+            onClick={() => setIsMenuOpen((o) => !o)}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+              <line x1="3" y1="7" x2="21" y2="7" />
+              <line x1="3" y1="12" x2="21" y2="12" />
+              <line x1="3" y1="17" x2="21" y2="17" />
             </svg>
-          </div>
-        </Link>
+          </button>
+
+          {/* Let's Talk (desktop) */}
+          <Link href="/about" className="hdr-talk-cta">
+            <span className="hdr-talk-text">Let&apos;s Talk</span>
+            <div className="hdr-talk-arrow">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="7" y1="17" x2="17" y2="7" />
+                <polyline points="7 7 17 7 17 17" />
+              </svg>
+            </div>
+          </Link>
+        </div>
       </header>
     </>
   );

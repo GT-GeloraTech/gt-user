@@ -75,6 +75,24 @@ export default function ServicesPage() {
   const titleSizeStep = Math.min(activeStep, TITLE_STEPS);
   const titleFontSize = titleFontSizes[titleSizeStep];
   const titleAtTop = activeStep >= TITLE_STEPS;
+  const [titleSettled, setTitleSettled] = useState(false);
+
+  /* Title must be placed at top position before below cards enter */
+  useEffect(() => {
+    if (activeStep >= TITLE_STEPS) {
+      if (activeStep > TITLE_STEPS) {
+        setTitleSettled(true);
+        return;
+      }
+      // Wait for title's 1.35s smooth transition to completely lock into top position
+      const timer = setTimeout(() => {
+        setTitleSettled(true);
+      }, 1250);
+      return () => clearTimeout(timer);
+    } else {
+      setTitleSettled(false);
+    }
+  }, [activeStep]);
 
   /* ── Mobile/Tablet Carousel state ── */
   const [mobileIdx, setMobileIdx] = useState(0);
@@ -120,10 +138,9 @@ export default function ServicesPage() {
     setIsLocked(true);
     activeStepRef.current = stepIdx;
     setActiveStep(stepIdx);
-    document.documentElement.style.overflow = "hidden";
-    document.body.style.overflow = "hidden";
+    document.documentElement.classList.add('viewport-locked');
     if (typeof targetTop === "number") {
-      window.scrollTo({ top: targetTop, behavior: "instant" });
+      window.scrollTo({ top: targetTop, behavior: "smooth" });
     }
   }, []);
 
@@ -132,14 +149,15 @@ export default function ServicesPage() {
     isLockedRef.current = false;
     setIsLocked(false);
     isUnlockingRef.current = true;
-    document.documentElement.style.overflow = "";
-    document.body.style.overflow = "";
+    document.documentElement.classList.remove('viewport-locked');
 
     const offsetTop = deckRef.current ? deckRef.current.offsetTop : window.scrollY;
     if (direction === "down") {
+      // Scroll past section into content below
       window.scrollTo({ top: offsetTop + window.innerHeight * 0.45, behavior: "smooth" });
     } else {
-      window.scrollTo({ top: Math.max(0, offsetTop - window.innerHeight * 0.45), behavior: "smooth" });
+      // Scroll smoothly back to the top of the deck section
+      window.scrollTo({ top: Math.max(0, offsetTop - 120), behavior: "smooth" });
     }
     setTimeout(() => {
       isUnlockingRef.current = false;
@@ -193,12 +211,14 @@ export default function ServicesPage() {
       if (!isLockedRef.current) return;
       e.preventDefault();
 
-      if (wheelCooldown.current) return;
-      wheelCooldown.current = true;
-      setTimeout(() => { wheelCooldown.current = false; }, 900);
-
       const goingDown = e.deltaY > 0;
       const cur = activeStepRef.current;
+
+      if (wheelCooldown.current) return;
+      wheelCooldown.current = true;
+      // Allow extra time when entering step 3 so the title settles at top and cards smoothly enter before next wheel
+      const cooldownTime = (goingDown && cur === TITLE_STEPS - 1) ? 1700 : 1000;
+      setTimeout(() => { wheelCooldown.current = false; }, cooldownTime);
 
       if (goingDown) {
         if (cur < TOTAL_STEPS - 1) goToStep(cur + 1);
@@ -212,13 +232,19 @@ export default function ServicesPage() {
     const onKeyDown = (e: KeyboardEvent) => {
       if (typeof window !== "undefined" && window.innerWidth <= 1024) return;
       if (!isLockedRef.current) return;
+      if (wheelCooldown.current) return;
       const cur = activeStepRef.current;
       if (e.key === "ArrowDown" || e.key === "PageDown") {
         e.preventDefault();
+        wheelCooldown.current = true;
+        const cooldownTime = cur === TITLE_STEPS - 1 ? 1700 : 1000;
+        setTimeout(() => { wheelCooldown.current = false; }, cooldownTime);
         if (cur < TOTAL_STEPS - 1) goToStep(cur + 1);
         else unlockDeck("down");
       } else if (e.key === "ArrowUp" || e.key === "PageUp") {
         e.preventDefault();
+        wheelCooldown.current = true;
+        setTimeout(() => { wheelCooldown.current = false; }, 1000);
         if (cur > 0) goToStep(cur - 1);
         else unlockDeck("up");
       }
@@ -310,10 +336,10 @@ export default function ServicesPage() {
           box-sizing: border-box;
           position: relative;
           width: 100%;
-          height: 100vh;
-          min-height: 640px;
+          min-height: 100vh;
           max-height: 1080px;
-          padding-top: 24px;
+          padding-top: clamp(60px, 9vh, 100px);
+          padding-bottom: clamp(30px, 5vh, 60px);
           display: flex;
           flex-direction: column;
           align-items: center;
@@ -344,7 +370,7 @@ export default function ServicesPage() {
           color: #B09DEA;
           text-transform: uppercase;
           text-align: center;
-          margin-top: clamp(34px, 5vh, 58px);
+          margin-top: 0;
           margin-bottom: clamp(10px, 1.8vh, 18px);
           display: flex;
           align-items: center;
@@ -398,7 +424,7 @@ export default function ServicesPage() {
           left: 50%;
           transform: translateX(-50%);
           width: min(2620px, 100vw);
-          height: clamp(400px, 72vh, 750px);
+          height: clamp(380px, 58vh, 680px);
           display: flex;
           align-items: flex-end;
           justify-content: center;
@@ -456,9 +482,9 @@ export default function ServicesPage() {
           user-select: none;
           pointer-events: none;
           transition:
-            top       0.65s cubic-bezier(0.22, 1, 0.36, 1),
-            transform 0.65s cubic-bezier(0.22, 1, 0.36, 1),
-            opacity   0.45s ease;
+            top       1.35s cubic-bezier(0.22, 1, 0.36, 1),
+            transform 1.35s cubic-bezier(0.22, 1, 0.36, 1),
+            opacity   0.75s ease;
         }
 
         .deck-header.title-at-top {
@@ -474,7 +500,7 @@ export default function ServicesPage() {
           text-align: center;
           white-space: nowrap;
           letter-spacing: -0.01em;
-          transition: font-size 0.65s cubic-bezier(0.22, 1, 0.36, 1);
+          transition: font-size 1.35s cubic-bezier(0.22, 1, 0.36, 1);
         }
 
         .deck-subtitle {
@@ -490,7 +516,7 @@ export default function ServicesPage() {
           align-items: center;
           gap: 16px;
           margin-top: clamp(8px, 1.2vh, 14px);
-          transition: opacity 0.45s ease, transform 0.45s ease;
+          transition: opacity 0.75s ease 0.2s, transform 0.85s cubic-bezier(0.22, 1, 0.36, 1) 0.2s;
         }
 
         .deck-subtitle-line {
@@ -509,8 +535,9 @@ export default function ServicesPage() {
           width: min(1140px, 86vw);
           height: clamp(580px, 66vh, 700px);
           transition:
-            top       0.65s cubic-bezier(0.22, 1, 0.36, 1),
-            transform 0.65s cubic-bezier(0.22, 1, 0.36, 1);
+            top       1.35s cubic-bezier(0.22, 1, 0.36, 1),
+            transform 1.25s cubic-bezier(0.22, 1, 0.36, 1),
+            opacity   0.95s cubic-bezier(0.22, 1, 0.36, 1);
         }
 
         /* Responsive adjustments preserving full card height */
@@ -547,11 +574,11 @@ export default function ServicesPage() {
           transform-style: preserve-3d;
           backface-visibility: hidden;
           transition:
-            top       0.65s cubic-bezier(0.22, 1, 0.36, 1),
-            width     0.65s cubic-bezier(0.22, 1, 0.36, 1),
-            height    0.65s cubic-bezier(0.22, 1, 0.36, 1),
-            transform 0.65s cubic-bezier(0.22, 1, 0.36, 1),
-            opacity   0.45s ease;
+            top       1.25s cubic-bezier(0.22, 1, 0.36, 1),
+            width     1.25s cubic-bezier(0.22, 1, 0.36, 1),
+            height    1.25s cubic-bezier(0.22, 1, 0.36, 1),
+            transform 1.25s cubic-bezier(0.22, 1, 0.36, 1),
+            opacity   0.75s ease;
         }
 
         .deck-card-body {
@@ -654,9 +681,9 @@ export default function ServicesPage() {
         }
 
         @media (max-width: 1024px) {
-          .services-hero-screen { padding-top: 16px; height: auto; min-height: auto; padding-bottom: 30px; }
+          .services-hero-screen { padding-top: clamp(88px, 12vh, 130px); height: auto; min-height: auto; padding-bottom: 30px; }
           .services-graphic-wrapper { position: relative; bottom: auto; left: auto; transform: none; height: clamp(220px, 50vw, 360px); margin-top: 16px; }
-          .services-eyebrow { margin-top: 24px; margin-bottom: 12px; }
+          .services-eyebrow { margin-top: 0; margin-bottom: 12px; }
 
           /* Hide desktop deck on mobile/tablet */
           .services-deck-section {
@@ -860,14 +887,9 @@ export default function ServicesPage() {
 
         {/* ── Hero Viewport Screen ── */}
         <div className="services-hero-screen">
-          <Header activeTab="Services" />
+          <div style={{ height: "64px" }} aria-hidden="true" />
 
           <section className="services-hero" aria-labelledby="services-hero-heading">
-            <div className="services-eyebrow">
-              <span className="services-dot">•</span>
-              EXPLORE OUR SERVICES
-              <span className="services-dot">•</span>
-            </div>
             <h1 id="services-hero-heading" className="services-title">
               <span className="services-title-top">Your idea has</span>
               <span className="services-title-gradient">more than one way forward</span>
@@ -930,13 +952,17 @@ export default function ServicesPage() {
             </div>
           </div>
 
-          {/* Card stack — only visible once title reached top */}
+          {/* Card stack — only visible once title reached top and settled into place */}
           {titleAtTop && (
             <div
-              className="deck-cards-area"
+              className={`deck-cards-area ${titleSettled ? "cards-settled" : "cards-entering"}`}
               style={{
                 top: cardIndex === 0 ? "clamp(135px, 16vh, 165px)" : "50%",
-                transform: cardIndex === 0 ? "translateX(-50%)" : "translate(-50%, -50%)",
+                transform: cardIndex === 0
+                  ? (titleSettled ? "translateX(-50%) translateY(0)" : "translateX(-50%) translateY(48px)")
+                  : "translate(-50%, -50%)",
+                opacity: titleSettled ? 1 : 0,
+                pointerEvents: titleSettled ? "auto" : "none",
               }}
             >
               {/* Render all 5 cards in reverse order (back first so front is on top) */}
@@ -1000,22 +1026,6 @@ export default function ServicesPage() {
                   </div>
                 );
               })}
-            </div>
-          )}
-
-          {/* Progress dots for cards (desktop) */}
-          {titleAtTop && (
-            <div className="deck-dots" role="tablist" aria-label="Service card navigation">
-              {SERVICES_CARDS.map((_, i) => (
-                <button
-                  key={i}
-                  className={`deck-dot${cardIndex === i ? " active" : ""}`}
-                  onClick={() => goToStep(TITLE_STEPS + i)}
-                  aria-label={`Service ${i + 1}`}
-                  aria-selected={cardIndex === i}
-                  role="tab"
-                />
-              ))}
             </div>
           )}
         </section>

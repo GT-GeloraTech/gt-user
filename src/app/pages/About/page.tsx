@@ -5,7 +5,7 @@ import Header from "@/app/components/Header";
 export default function AboutPage() {
   return (
     <main className="simple-page-shell">
-      <Header activeTab="About" />
+      <div style={{ height: "64px" }} aria-hidden="true" />
       <div className="simple-page-content">
         <h1>
           About <span style={{ color: "#c084fc", textShadow: "0 0 35px rgba(192,132,252,0.8)" }}>Gelora Tech</span>

@@ -121,8 +121,9 @@ export default function HomePage() {
 
   const [activeStepIndex, setActiveStepIndex] = useState(0);
   const activeStepRef = useRef(0);
+  const [prevStepIndex, setPrevStepIndex] = useState<number | null>(null);
 
-  // 'forward' = going to a higher step (cards slide left), 'backward' = going lower (cards slide right)
+  // 'forward' = going to a higher step (cards slide right), 'backward' = going lower (cards slide left)
   const [slideDir, setSlideDir] = useState<'forward' | 'backward' | 'none'>('none');
 
   const wheelCooldown = useRef(false);
@@ -168,6 +169,7 @@ export default function HomePage() {
       processTimer.current = setInterval(() => {
         setSlideDir('forward');
         setActiveStepIndex((prev) => {
+          setPrevStepIndex(prev);
           const next = (prev + 1) % PROCESS_STEPS.length;
           activeStepRef.current = next;
           return next;
@@ -177,27 +179,30 @@ export default function HomePage() {
   }, []);
 
   const handleProcessNext = useCallback(() => {
+    const prev = activeStepRef.current;
+    const next = (prev + 1) % PROCESS_STEPS.length;
+    setPrevStepIndex(prev);
     setSlideDir('forward');
-    setActiveStepIndex((prev) => {
-      const next = (prev + 1) % PROCESS_STEPS.length;
-      activeStepRef.current = next;
-      return next;
-    });
+    activeStepRef.current = next;
+    setActiveStepIndex(next);
     resetProcessTimer();
   }, [resetProcessTimer]);
 
   const handleProcessPrev = useCallback(() => {
+    const prev = activeStepRef.current;
+    const next = (prev - 1 + PROCESS_STEPS.length) % PROCESS_STEPS.length;
+    setPrevStepIndex(prev);
     setSlideDir('backward');
-    setActiveStepIndex((prev) => {
-      const next = (prev - 1 + PROCESS_STEPS.length) % PROCESS_STEPS.length;
-      activeStepRef.current = next;
-      return next;
-    });
+    activeStepRef.current = next;
+    setActiveStepIndex(next);
     resetProcessTimer();
   }, [resetProcessTimer]);
 
   const handleProcessSelect = useCallback((idx: number) => {
-    setSlideDir(idx >= activeStepRef.current ? 'forward' : 'backward');
+    if (idx === activeStepRef.current) return;
+    const dir = idx >= activeStepRef.current ? 'forward' : 'backward';
+    setPrevStepIndex(activeStepRef.current);
+    setSlideDir(dir);
     activeStepRef.current = idx;
     setActiveStepIndex(idx);
     resetProcessTimer();
@@ -207,7 +212,10 @@ export default function HomePage() {
    * Helpers
    * ─────────────────────────────────────────────────────── */
   const goToStep = useCallback((idx: number) => {
-    setSlideDir(idx > activeStepRef.current ? 'forward' : 'backward');
+    if (idx === activeStepRef.current) return;
+    const dir = idx > activeStepRef.current ? 'forward' : 'backward';
+    setPrevStepIndex(activeStepRef.current);
+    setSlideDir(dir);
     activeStepRef.current = idx;
     setActiveStepIndex(idx);
     resetProcessTimer();
@@ -222,8 +230,11 @@ export default function HomePage() {
     setIsLocked(true);
     activeStepRef.current = stepIdx;
     setActiveStepIndex(stepIdx);
+    setPrevStepIndex(null);
+    setSlideDir('none');
     document.documentElement.style.overflow = "hidden";
     document.body.style.overflow = "hidden";
+    document.documentElement.classList.add('viewport-locked');
     if (typeof targetTop === "number") {
       window.scrollTo({ top: targetTop, behavior: "instant" });
     }
@@ -242,6 +253,7 @@ export default function HomePage() {
 
     document.documentElement.style.overflow = "";
     document.body.style.overflow = "";
+    document.documentElement.classList.remove('viewport-locked');
 
     const offsetTop = sectionRef.current ? sectionRef.current.offsetTop : window.scrollY;
 
@@ -1144,8 +1156,8 @@ export default function HomePage() {
 
         @keyframes peekLeftSlideForward {
           0% {
-            transform: translateY(-50%) translateX(min(180px, 14vw));
-            opacity: 0.15;
+            transform: translateY(-50%) translateX(max(-220px, -16vw));
+            opacity: 0;
           }
           100% {
             transform: translateY(-50%) translateX(0);
@@ -1154,8 +1166,8 @@ export default function HomePage() {
         }
         @keyframes peekLeftSlideBackward {
           0% {
-            transform: translateY(-50%) translateX(max(-220px, -16vw));
-            opacity: 0;
+            transform: translateY(-50%) translateX(min(180px, 14vw));
+            opacity: 0.15;
           }
           100% {
             transform: translateY(-50%) translateX(0);
@@ -1203,8 +1215,8 @@ export default function HomePage() {
 
         @keyframes peekRightSlideForward {
           0% {
-            transform: translateY(-50%) translateX(min(220px, 16vw));
-            opacity: 0;
+            transform: translateY(-50%) translateX(max(-180px, -14vw));
+            opacity: 0.15;
           }
           100% {
             transform: translateY(-50%) translateX(0);
@@ -1213,8 +1225,8 @@ export default function HomePage() {
         }
         @keyframes peekRightSlideBackward {
           0% {
-            transform: translateY(-50%) translateX(max(-180px, -14vw));
-            opacity: 0.15;
+            transform: translateY(-50%) translateX(min(220px, 16vw));
+            opacity: 0;
           }
           100% {
             transform: translateY(-50%) translateX(0);
@@ -1256,47 +1268,93 @@ export default function HomePage() {
           display: flex;
           flex-direction: column;
           justify-content: space-between;
-          /* Slow, elegant horizontal slideshow transition */
-          transition: opacity 0.95s cubic-bezier(0.22, 1, 0.36, 1),
-                      transform 0.95s cubic-bezier(0.22, 1, 0.36, 1),
-                      visibility 0s linear 0.95s;
+          opacity: 0;
+          visibility: hidden;
+          pointer-events: none;
+          transform: scale(0.92);
         }
         .process-center-card.is-active {
           opacity: 1;
           visibility: visible;
           transform: translateX(0) scale(1);
           pointer-events: auto;
-          transition: opacity 0.95s cubic-bezier(0.22, 1, 0.36, 1),
-                      transform 0.95s cubic-bezier(0.22, 1, 0.36, 1),
-                      visibility 0s linear 0s;
+          z-index: 10;
         }
 
-        /* Going FORWARD (step 1→2→3→4): outgoing card slides LEFT, incoming enters from RIGHT */
-        .slide-forward .process-center-card.is-passed {
-          opacity: 0;
-          visibility: hidden;
-          transform: translateX(-115%) scale(0.92);
+        /* ── FORWARD ANIMATIONS (step 1→2→3→4) ── */
+        /* Outgoing card slides to the RIGHT */
+        .process-center-card.anim-forward-out {
+          visibility: visible;
           pointer-events: none;
+          z-index: 10;
+          animation: slideCardForwardOut 0.95s cubic-bezier(0.22, 1, 0.36, 1) forwards;
         }
-        .slide-forward .process-center-card.is-incoming {
-          opacity: 0;
-          visibility: hidden;
-          transform: translateX(115%) scale(0.92);
-          pointer-events: none;
+        /* Incoming card enters from the LEFT */
+        .process-center-card.anim-forward-in {
+          visibility: visible;
+          pointer-events: auto;
+          z-index: 11;
+          animation: slideCardForwardIn 0.95s cubic-bezier(0.22, 1, 0.36, 1) forwards;
         }
 
-        /* Going BACKWARD (step 4→3→2→1): outgoing card slides RIGHT, incoming enters from LEFT */
-        .slide-backward .process-center-card.is-passed {
-          opacity: 0;
-          visibility: hidden;
-          transform: translateX(115%) scale(0.92);
-          pointer-events: none;
+        @keyframes slideCardForwardOut {
+          0% {
+            opacity: 1;
+            transform: translateX(0) scale(1);
+          }
+          100% {
+            opacity: 0;
+            transform: translateX(115%) scale(0.92);
+          }
         }
-        .slide-backward .process-center-card.is-incoming {
-          opacity: 0;
-          visibility: hidden;
-          transform: translateX(-115%) scale(0.92);
+
+        @keyframes slideCardForwardIn {
+          0% {
+            opacity: 0;
+            transform: translateX(-115%) scale(0.92);
+          }
+          100% {
+            opacity: 1;
+            transform: translateX(0) scale(1);
+          }
+        }
+
+        /* ── BACKWARD ANIMATIONS (step 4→3→2→1, scroll UP) ── */
+        /* Outgoing card (e.g. Step 4) slides to the LEFT (not right side!) */
+        .process-center-card.anim-backward-out {
+          visibility: visible;
           pointer-events: none;
+          z-index: 10;
+          animation: slideCardBackwardOut 0.95s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+        }
+        /* Incoming card (e.g. Step 3) enters from the LEFT */
+        .process-center-card.anim-backward-in {
+          visibility: visible;
+          pointer-events: auto;
+          z-index: 11;
+          animation: slideCardBackwardIn 0.95s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+        }
+
+        @keyframes slideCardBackwardOut {
+          0% {
+            opacity: 1;
+            transform: translateX(0) scale(1);
+          }
+          100% {
+            opacity: 0;
+            transform: translateX(-115%) scale(0.92);
+          }
+        }
+
+        @keyframes slideCardBackwardIn {
+          0% {
+            opacity: 0;
+            transform: translateX(-115%) scale(0.92);
+          }
+          100% {
+            opacity: 1;
+            transform: translateX(0) scale(1);
+          }
         }
 
         /* Center card image area */
@@ -1687,7 +1745,6 @@ export default function HomePage() {
       `}</style>
 
       <section className="home-hero" aria-label="Gelora Tech hero">
-        <Header activeTab="Home" />
 
         {/* ── Desktop: Canvas fan cards (clipped inside hero) ── */}
         <div className="home-hero-canvas">
@@ -1914,42 +1971,53 @@ export default function HomePage() {
 
         {/* Center Card Stack (Rectangle 176) */}
         <div className="process-cards-container">
-          {PROCESS_STEPS.map((step, idx) => (
-            <article
-              key={step.step}
-              className={`process-center-card ${idx === activeStepIndex ? "is-active"
-                : idx < activeStepIndex ? "is-passed"
-                  : "is-incoming"
-                }`}
-              onClick={() => goToStep(idx)}
-              role="button"
-              tabIndex={0}
-              aria-label={`Step ${step.step}: ${step.title}`}
-              aria-hidden={idx !== activeStepIndex}
-            >
-              <div className="process-center-card-img-wrap">
-                <Image
-                  className={`process-card-image ${step.imgClass}`}
-                  src={step.image}
-                  alt={step.alt}
-                  width={480}
-                  height={350}
-                  priority={idx === 0}
-                />
-              </div>
-              <div className="process-center-card-body">
-                <h3 className="process-card-title">{step.title}</h3>
-                <p className="process-card-desc">
-                  {step.desc.split("\n").map((line, lineIdx) => (
-                    <span key={lineIdx}>
-                      {line}
-                      {lineIdx < step.desc.split("\n").length - 1 && <br />}
-                    </span>
-                  ))}
-                </p>
-              </div>
-            </article>
-          ))}
+          {PROCESS_STEPS.map((step, idx) => {
+            const isActive = idx === activeStepIndex;
+            const isOutgoing = idx === prevStepIndex && slideDir !== 'none';
+
+            let animClass = "";
+            if (slideDir === 'forward') {
+              if (isActive) animClass = "anim-forward-in";
+              else if (isOutgoing) animClass = "anim-forward-out";
+            } else if (slideDir === 'backward') {
+              if (isActive) animClass = "anim-backward-in";
+              else if (isOutgoing) animClass = "anim-backward-out";
+            }
+
+            return (
+              <article
+                key={step.step}
+                className={`process-center-card ${isActive ? "is-active" : ""} ${isOutgoing ? "is-outgoing" : ""} ${animClass}`}
+                onClick={() => goToStep(idx)}
+                role="button"
+                tabIndex={0}
+                aria-label={`Step ${step.step}: ${step.title}`}
+                aria-hidden={!isActive}
+              >
+                <div className="process-center-card-img-wrap">
+                  <Image
+                    className={`process-card-image ${step.imgClass}`}
+                    src={step.image}
+                    alt={step.alt}
+                    width={480}
+                    height={350}
+                    priority={idx === 0}
+                  />
+                </div>
+                <div className="process-center-card-body">
+                  <h3 className="process-card-title">{step.title}</h3>
+                  <p className="process-card-desc">
+                    {step.desc.split("\n").map((line, lineIdx) => (
+                      <span key={lineIdx}>
+                        {line}
+                        {lineIdx < step.desc.split("\n").length - 1 && <br />}
+                      </span>
+                    ))}
+                  </p>
+                </div>
+              </article>
+            );
+          })}
         </div>
 
         {/* Mobile & Tablet Navigation Controls: Below the Card */}

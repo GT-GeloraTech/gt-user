@@ -2,6 +2,8 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter, usePathname } from "next/navigation";
+import { useCallback } from "react";
 
 interface FooterProps {
   showCta?: boolean;
@@ -27,9 +29,39 @@ const PARTICLES = [
 ];
 
 export default function Footer({ showCta = true }: FooterProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+
+  const handleNavToTop = useCallback(
+    (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+      e.preventDefault();
+      document.documentElement.style.overflow = "";
+      document.body.style.overflow = "";
+
+      if (pathname === href) {
+        window.scrollTo({ top: 0, left: 0, behavior: "smooth" });
+      } else {
+        window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+        router.push(href);
+        setTimeout(() => {
+          window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+        }, 40);
+      }
+    },
+    [pathname, router]
+  );
+
   return (
     <div className="gt-bottom-section">
       <style>{`
+        /* ─── Bottom Section Container ─── */
+        .gt-bottom-section {
+          position: relative;
+          width: 100%;
+          align-self: stretch;
+          box-sizing: border-box;
+        }
+
         /* ─── CTA Wrapper (Rectangle 190) ─── */
         .gt-cta-wrapper {
           position: relative;
@@ -266,7 +298,7 @@ export default function Footer({ showCta = true }: FooterProps) {
           margin: 0 0 22px 0;
           font-family: 'Inter', sans-serif;
           font-weight: 600;
-          font-size: 13.5px;
+          font-size: 18.5px;
           line-height: 18px;
           letter-spacing: 0.08em;
           text-transform: uppercase;
@@ -283,7 +315,7 @@ export default function Footer({ showCta = true }: FooterProps) {
         }
         .gt-footer-links-list a {
           font-family: 'Inter', sans-serif;
-          font-size: 15px;
+          font-size: 16px;
           line-height: 1.4;
           color: rgba(225, 218, 245, 0.85);
           text-decoration: none;
@@ -488,7 +520,7 @@ export default function Footer({ showCta = true }: FooterProps) {
             </p>
 
             <div className="gt-cta-btns">
-              <Link href="/about" className="gt-cta-talk-btn">
+              <Link href="/about" className="gt-cta-talk-btn" onClick={(e) => handleNavToTop(e, "/about")}>
                 <span className="gt-cta-talk-text">Let&apos;s Talk</span>
                 <div className="gt-cta-arrow-box">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#744FE7" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -497,7 +529,7 @@ export default function Footer({ showCta = true }: FooterProps) {
                   </svg>
                 </div>
               </Link>
-              <Link href="/services" className="gt-cta-explore-btn">
+              <Link href="/services" className="gt-cta-explore-btn" onClick={(e) => handleNavToTop(e, "/services")}>
                 Explore Services
               </Link>
             </div>
@@ -512,7 +544,12 @@ export default function Footer({ showCta = true }: FooterProps) {
           <div className="gt-footer-grid">
             {/* Brand */}
             <div className="gt-footer-col">
-              <Link href="/" className="gt-footer-brand-wrap">
+              <Link
+                href="/"
+                className="gt-footer-brand-wrap"
+                onClick={(e) => handleNavToTop(e, "/")}
+                aria-label="Gelora Tech Home"
+              >
                 <Image src="/asset/logo.png" alt="Gelora Tech" width={58} height={58} className="gt-footer-logo-img" />
                 <Image src="/asset/gtText.png" alt="Gelora Tech" width={162} height={42} className="gt-footer-brand-text" />
               </Link>
@@ -525,11 +562,11 @@ export default function Footer({ showCta = true }: FooterProps) {
             <div className="gt-footer-col">
               <h4 className="gt-footer-col-title">EXPLORE</h4>
               <ul className="gt-footer-links-list">
-                <li><Link href="/">Home</Link></li>
-                <li><Link href="/services">Services</Link></li>
-                <li><Link href="/product">Products</Link></li>
-                <li><Link href="/about">About</Link></li>
-                <li><Link href="/careers">Careers</Link></li>
+                <li><Link href="/" onClick={(e) => handleNavToTop(e, "/")}>Home</Link></li>
+                <li><Link href="/services" onClick={(e) => handleNavToTop(e, "/services")}>Services</Link></li>
+                <li><Link href="/product" onClick={(e) => handleNavToTop(e, "/product")}>Products</Link></li>
+                <li><Link href="/about" onClick={(e) => handleNavToTop(e, "/about")}>About</Link></li>
+                <li><Link href="/careers" onClick={(e) => handleNavToTop(e, "/careers")}>Careers</Link></li>
               </ul>
             </div>
 
@@ -537,11 +574,11 @@ export default function Footer({ showCta = true }: FooterProps) {
             <div className="gt-footer-col">
               <h4 className="gt-footer-col-title">SERVICES</h4>
               <ul className="gt-footer-links-list">
-                <li><Link href="/services">Web Development</Link></li>
-                <li><Link href="/services">Mobile Applications</Link></li>
-                <li><Link href="/services">Cloud Solutions</Link></li>
-                <li><Link href="/services">AI Automation</Link></li>
-                <li><Link href="/services">Cybersecurity</Link></li>
+                <li><Link href="/services" onClick={(e) => handleNavToTop(e, "/services")}>Web Development</Link></li>
+                <li><Link href="/services" onClick={(e) => handleNavToTop(e, "/services")}>Mobile Applications</Link></li>
+                <li><Link href="/services" onClick={(e) => handleNavToTop(e, "/services")}>Cloud Solutions</Link></li>
+                <li><Link href="/services" onClick={(e) => handleNavToTop(e, "/services")}>AI Automation</Link></li>
+                <li><Link href="/services" onClick={(e) => handleNavToTop(e, "/services")}>Cybersecurity</Link></li>
               </ul>
             </div>
 
