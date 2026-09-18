@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 
 interface ApplyModalProps {
   isOpen: boolean;
@@ -12,6 +13,12 @@ const ALLOWED_EXTENSIONS = ['.pdf', '.doc', '.docx'];
 const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
 
 export default function ApplyModal({ isOpen, onClose, defaultRole = '' }: ApplyModalProps) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const [formData, setFormData] = useState({
     fullName: '',
     phone: '',
@@ -177,15 +184,20 @@ export default function ApplyModal({ isOpen, onClose, defaultRole = '' }: ApplyM
     }, 2200);
   };
 
-  if (!isOpen) return null;
+  if (!isOpen || !mounted) return null;
 
-  return (
+  return createPortal(
     <>
       <style>{`
         .apply-overlay {
           position: fixed;
-          inset: 0;
-          z-index: 9999;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          width: 100vw;
+          height: 100vh;
+          z-index: 999999;
           background: rgba(10, 8, 24, 0.72);
           backdrop-filter: blur(6px);
           -webkit-backdrop-filter: blur(6px);
@@ -193,6 +205,7 @@ export default function ApplyModal({ isOpen, onClose, defaultRole = '' }: ApplyM
           align-items: center;
           justify-content: center;
           padding: 16px;
+          box-sizing: border-box;
           animation: overlayFadeIn 0.22s ease;
         }
         @keyframes overlayFadeIn {
@@ -898,7 +911,8 @@ export default function ApplyModal({ isOpen, onClose, defaultRole = '' }: ApplyM
           </div>
         </form>
       </div>
-    </>
+    </>,
+    document.body
   );
 }
 

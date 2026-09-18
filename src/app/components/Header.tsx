@@ -51,7 +51,11 @@ export default function Header({ activeTab, onTabChange }: HeaderProps) {
 
   // `selected` takes priority so the active style immediately follows the click,
   // not the pathname (which only changes after router.push fires).
-  const currentTab: string = selected || NAV_ITEMS.find((item) => item.href === pathname)?.name || activeTab || "Home";
+  const currentTab: string =
+    selected ||
+    NAV_ITEMS.find((item) => item.href === pathname || (item.href !== "/" && pathname?.startsWith(item.href)))?.name ||
+    activeTab ||
+    "Home";
 
   // Reposition the pill directly to the currently-active nav item
   const repositionPill = useCallback((tabName: string) => {
@@ -59,10 +63,8 @@ export default function Header({ activeTab, onTabChange }: HeaderProps) {
     const el = navItemRefs.current[idx];
     const pill = navPillRef.current;
     if (!el || !pill) return;
-    const pr = pill.getBoundingClientRect();
-    const er = el.getBoundingClientRect();
-    setPillLeft(er.left - pr.left);
-    setPillWidth(er.width);
+    setPillLeft(el.offsetLeft);
+    setPillWidth(el.offsetWidth);
   }, []);
 
   useEffect(() => { setMounted(true); }, []);
@@ -71,27 +73,68 @@ export default function Header({ activeTab, onTabChange }: HeaderProps) {
     document.title = PAGE_TITLES[pathname] || "Gelora Tech";
   }, [pathname]);
 
-  // Detect if the header is over a light (white/cream) background section
+  // On every route change, ensure the viewport-locked class (used by scroll-locked sections)
+  // is removed so the header is never stuck hidden after page navigation.
   useEffect(() => {
+    document.documentElement.classList.remove('viewport-locked');
+    document.documentElement.style.overflow = "";
+    document.body.style.overflow = "";
+  }, [pathname]);
+
+  // Detect if the header is over a white/light background section (including gradients)
+  useEffect(() => {
+    const isLightElement = (el: HTMLElement): boolean | null => {
+      // 1. Check known light section classes
+      if (el.closest('.gt-cta-wrapper, .story-section, .opportunities-section, .trusted-strip, .careers-light-section')) {
+        return true;
+      }
+      const style = window.getComputedStyle(el);
+      // 2. Check background-image for light gradients
+      const bgImg = style.backgroundImage;
+      if (bgImg && bgImg !== 'none') {
+        if (/E9E1FF|CDC2EA|EEEAFB|E0D5FF|E5DCFF|F4F0FF|255,\s*255,\s*255|238,\s*234,\s*251|244,\s*240,\s*255/i.test(bgImg)) {
+          return true;
+        }
+      }
+      // 3. Check background-color
+      const bg = style.backgroundColor;
+      if (bg && bg !== 'transparent' && bg !== 'rgba(0, 0, 0, 0)') {
+        const m = bg.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
+        if (m) {
+          const alpha = m[4] !== undefined ? parseFloat(m[4]) : 1;
+          if (alpha > 0.25) {
+            const r = parseInt(m[1]), g = parseInt(m[2]), b = parseInt(m[3]);
+            const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+            return luminance > 0.55;
+          }
+        }
+      }
+      return null;
+    };
+
     const detectBg = () => {
       try {
-        // Sample the area just below the header (around y=80px)
-        const sampleY = 80;
-        const sampleX = window.innerWidth / 2;
+        const pill = navPillRef.current;
+        let sampleX = window.innerWidth / 2;
+        let sampleY = 32;
+        if (pill) {
+          const rect = pill.getBoundingClientRect();
+          sampleX = rect.left + rect.width / 2;
+          sampleY = rect.top + rect.height / 2;
+        }
+
         const elements = document.elementsFromPoint(sampleX, sampleY) as HTMLElement[];
         for (const el of elements) {
-          // Skip the header itself and its children
           if (el.closest('header')) continue;
-          const bg = window.getComputedStyle(el).backgroundColor;
-          if (!bg || bg === 'transparent' || bg === 'rgba(0, 0, 0, 0)') continue;
-          // Parse RGB values
-          const m = bg.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
-          if (!m) continue;
-          const r = parseInt(m[1]), g = parseInt(m[2]), b = parseInt(m[3]);
-          // Perceived luminance formula
-          const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-          setIsLightBg(luminance > 0.6);
-          return;
+          let curr: HTMLElement | null = el;
+          while (curr && curr !== document.body && curr !== document.documentElement) {
+            const res = isLightElement(curr);
+            if (res !== null) {
+              setIsLightBg(res);
+              return;
+            }
+            curr = curr.parentElement;
+          }
         }
         setIsLightBg(false);
       } catch {
@@ -108,9 +151,20 @@ export default function Header({ activeTab, onTabChange }: HeaderProps) {
     };
   }, [pathname]);
 
+
+
   useEffect(() => {
+    let prevY = window.scrollY;
     const handleScroll = () => {
-      setIsScrolled(window.scrollY > 20);
+      const curY = window.scrollY;
+      setIsScrolled(curY > 20);
+
+      // If user is near the very top of the page, ensure viewport-locked is cleared
+      // as a failsafe so header is never stuck hidden on fresh reload
+      if (curY < 80) {
+        document.documentElement.classList.remove('viewport-locked');
+      }
+      prevY = curY;
     };
     handleScroll();
     window.addEventListener("scroll", handleScroll, { passive: true });
@@ -146,11 +200,14 @@ export default function Header({ activeTab, onTabChange }: HeaderProps) {
       }
     }
 
-    const matched = NAV_ITEMS.find((item) => item.href === pathname)?.name;
+    const matched = NAV_ITEMS.find((item) => item.href === pathname || (item.href !== "/" && pathname?.startsWith(item.href)))?.name;
     if (matched) {
       setSelected(matched);
       repositionPill(matched);
       setPillReady(true);
+    } else {
+      setSelected("");
+      setPillReady(false);
     }
   }, [pathname, repositionPill]);
 
@@ -200,11 +257,8 @@ export default function Header({ activeTab, onTabChange }: HeaderProps) {
         return;
       }
 
-      const pr = pill.getBoundingClientRect();
-      const rTo = elTo.getBoundingClientRect();
-
-      const leftTo = rTo.left - pr.left;
-      const widthTo = rTo.width;
+      const leftTo = elTo.offsetLeft;
+      const widthTo = elTo.offsetWidth;
       const dir = toIdx > fromIdx ? "right" : "left";
       setMeltDirection(dir);
 
@@ -301,7 +355,7 @@ export default function Header({ activeTab, onTabChange }: HeaderProps) {
               );
             })}
           </div>
-          <Link href="/about" onClick={() => setIsMenuOpen(false)}
+          <Link href="/contact" onClick={() => setIsMenuOpen(false)}
             style={{ margin: "8px 16px 32px", display: "flex", alignItems: "center", justifyContent: "center", height: "50px", borderRadius: "100px", background: "linear-gradient(133.45deg,#8C67FE 9.67%,#EAE1FF 100%)", boxShadow: "0 4px 16px rgba(94,75,142,0.38)", textDecoration: "none", fontFamily: "'Inter',sans-serif", fontWeight: 600, fontSize: "15px", color: "#fff" }}>
             Let&apos;s Talk
           </Link>
@@ -318,13 +372,22 @@ export default function Header({ activeTab, onTabChange }: HeaderProps) {
 
         /* ── Fixed Header Bar (Transparent background per user request) ── */
         header.hdr-fixed-header {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          width: 100%;
+          z-index: 1000000 !important;
           background: transparent !important;
           backdrop-filter: none !important;
           -webkit-backdrop-filter: none !important;
           border-bottom: none !important;
           box-shadow: none !important;
-          transition: opacity 0.35s ease, transform 0.35s ease;
-          pointer-events: auto !important;
+          transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.35s ease, visibility 0.45s;
+          pointer-events: auto;
+          opacity: 1;
+          visibility: visible;
+          transform: translateY(0);
         }
 
         header.hdr-fixed-header.scrolled {
@@ -335,61 +398,126 @@ export default function Header({ activeTab, onTabChange }: HeaderProps) {
           box-shadow: none !important;
         }
 
+        /* When viewport is locked (e.g. process steps section), slide up and hide header smoothly */
         html.viewport-locked header.hdr-fixed-header {
-          opacity: 0;
+          opacity: 0 !important;
           pointer-events: none !important;
-          transform: translateY(-8px);
+          transform: translateY(-100%) !important;
+          visibility: hidden !important;
+          transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.35s ease, visibility 0.45s !important;
         }
 
+        /* ── Logo glassmorphism pill (Default / Dark) ── */
+        .hdr-logo-glass {
+          display: flex;
+          align-items: center;
+          padding: 7px 16px 7px 10px;
+          border-radius: 30px;
+          background: rgba(255, 255, 255, 0.08);
+          border: 1px solid rgba(255, 255, 255, 0.14);
+          backdrop-filter: blur(24px);
+          -webkit-backdrop-filter: blur(24px);
+          box-shadow: 0 4px 20px rgba(4, 2, 18, 0.35),
+                      inset 0 1px 0 rgba(255,255,255,0.12);
+          transition: background 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+          flex-shrink: 0;
+        }
+        .hdr-logo-glass:hover {
+          background: rgba(255, 255, 255, 0.13);
+          border-color: rgba(255, 255, 255, 0.22);
+          box-shadow: 0 6px 28px rgba(4, 2, 18, 0.45),
+                      inset 0 1px 0 rgba(255,255,255,0.18);
+        }
         .hdr-brand-link {
-          display: flex; align-items: center; gap: 12px;
-          text-decoration: none; user-select: none; flex-shrink: 0;
+          display: flex; align-items: center; gap: 10px;
+          text-decoration: none; user-select: none;
         }
         .hdr-logo-glow {
           height: auto; object-fit: contain;
           filter: drop-shadow(0 0 10px rgba(116,79,231,0.9)) drop-shadow(0 0 20px rgba(145,200,230,0.5));
           transition: transform 0.3s ease, filter 0.3s ease;
         }
-        .hdr-brand-link:hover .hdr-logo-glow {
+        .hdr-logo-glass:hover .hdr-logo-glow {
           transform: scale(1.05);
           filter: drop-shadow(0 0 14px rgba(116,79,231,1)) drop-shadow(0 0 28px rgba(145,200,230,0.75));
         }
         .hdr-brand-text {
-          width: 124px; height: auto; margin-left: 12px;
+          width: 116px; height: auto;
           object-fit: contain; filter: drop-shadow(0 0 8px rgba(191,239,255,0.35));
+          transition: filter 0.3s ease;
         }
 
-        /* ── Nav pill container (Consistent dark glass pill like Image 1 everywhere) ── */
+        /* ── Light-mode Logo Pill (Matching Image 2: zolarys) ── */
+        .hdr-logo-glass.light-logo {
+          background: rgba(0, 0, 0, 0.045);
+          border: 1px solid rgba(0, 0, 0, 0.08);
+          box-shadow: 0 4px 18px rgba(0, 0, 0, 0.03);
+        }
+        .hdr-logo-glass.light-logo .hdr-brand-text {
+          filter: brightness(0.12);
+        }
+        .hdr-logo-glass.light-logo .hdr-logo-glow {
+          filter: drop-shadow(0 0 6px rgba(116,79,231,0.5));
+        }
         .hdr-nav-pill {
           position: relative;
           box-sizing: border-box;
           width: min(540px, 48vw);
-          height: 48px;
-          background: rgba(18, 12, 45, 0.72);
-          border: 1px solid rgba(255, 255, 255, 0.14);
-          box-shadow: 0 4px 20px rgba(4, 2, 18, 0.4);
-          border-radius: 355px;
+          height: 58px;
+          border-radius: 355.245px;
           backdrop-filter: blur(24px);
           -webkit-backdrop-filter: blur(24px);
           display: flex;
           align-items: center;
           justify-content: center;
           gap: 4px;
-          padding: 5px 6px;
+          padding: 0 12px;
           user-select: none;
+          background: rgba(255, 255, 255, 0.08);
+          border: 1px solid rgba(255, 255, 255, 0.09);
+          box-shadow: none;
         }
 
-        /* ── Active Background (Melts and flows side-by-side) ── */
+        /* ── Left-top corner curve border highlight ONLY (no harsh cutoff) ── */
+        .hdr-nav-pill::before {
+          content: '';
+          position: absolute;
+          inset: -1px;
+          border-radius: 355.245px;
+          border: 1.5px solid rgba(255, 255, 255, 0.9);
+          pointer-events: none;
+          z-index: 3;
+          -webkit-mask-image: radial-gradient(circle at 0px 0px, #000 0%, #000 22px, transparent 52px);
+          mask-image: radial-gradient(circle at 0px 0px, #000 0%, #000 22px, transparent 52px);
+        }
+
+        /* ── Right-bottom corner curve border highlight ONLY (no harsh cutoff) ── */
+        .hdr-nav-pill::after {
+          content: '';
+          position: absolute;
+          inset: -1px;
+          border-radius: 355.245px;
+          border: 1.5px solid rgba(255, 255, 255, 0.9);
+          pointer-events: none;
+          z-index: 3;
+          -webkit-mask-image: radial-gradient(circle at 100% 100%, #000 0%, #000 22px, transparent 52px);
+          mask-image: radial-gradient(circle at 100% 100%, #000 0%, #000 22px, transparent 52px);
+        }
+
+        /* ── Active sliding background pill ── */
         .hdr-sliding-pill {
           position: absolute;
-          top: 5px;
-          height: 38px;
-          border-radius: 24px;
-          background: linear-gradient(180deg, rgba(140,103,255,0.22) 0%, rgba(160,120,255,0.32) 100%);
+          top: calc((100% - 40px) / 2);
+          height: 40px;
+          border-radius: 22px;
+          background: linear-gradient(180deg, rgba(140,103,255,0.28) 0%, rgba(130,90,255,0.38) 100%);
           border: 1px solid rgba(255,255,255,0.28);
-          backdrop-filter: blur(2px);
-          -webkit-backdrop-filter: blur(2px);
-          box-shadow: 0 2px 16px rgba(100,60,220,0.25), inset 0 1px 0 rgba(255,255,255,0.18);
+          backdrop-filter: blur(3px);
+          -webkit-backdrop-filter: blur(3px);
+          box-shadow:
+            0 2px 14px rgba(100,60,220,0.25),
+            inset 0 1px 1px rgba(255,255,255,0.35),
+            inset 0 -1px 1px rgba(255,255,255,0.12);
           pointer-events: none;
           z-index: 1;
           /* No transition by default to prevent animation from the left on page mount */
@@ -448,7 +576,7 @@ export default function Header({ activeTab, onTabChange }: HeaderProps) {
           font-family: 'Inter', sans-serif;
           font-weight: 400;
           font-size: 15px;
-          line-height: 18px;
+          line-height: 1;
           color: rgba(255,255,255,0.78);
           text-decoration: none;
           display: inline-flex;
@@ -456,10 +584,10 @@ export default function Header({ activeTab, onTabChange }: HeaderProps) {
           justify-content: center;
           flex: 1 1 0;
           min-width: 0;
-          max-width: 100px;
-          height: 38px;
-          padding: 0 8px;
-          border-radius: 24px;
+          max-width: 110px;
+          height: 40px;
+          padding: 0 16px;
+          border-radius: 22px;
           z-index: 2;
           cursor: pointer;
           transition: color 0.3s ease;
@@ -467,17 +595,41 @@ export default function Header({ activeTab, onTabChange }: HeaderProps) {
         .hdr-nav-item:hover { color: #ffffff; }
         .hdr-nav-item.active { font-weight: 600; color: #ffffff; }
 
-        /* ── Light background mode: tabs turn dark/black ── */
+        /* ── Light-mode Nav Pill  ── */
+        .hdr-nav-pill.light-mode {
+          background: rgba(0, 0, 0, 0.045);
+          border: 1px solid rgba(0, 0, 0, 0.08);
+          box-shadow: 0 4px 18px rgba(0, 0, 0, 0.03);
+        }
+
+        /* Hide dark-mode glowing corner highlights on light mode */
+        .hdr-nav-pill.light-mode::before,
+        .hdr-nav-pill.light-mode::after {
+          opacity: 0;
+        }
+
+        /* Light-mode nav item text: clean dark charcoal matching Image 2 */
         .hdr-nav-pill.light-mode .hdr-nav-item {
-          color: rgba(20, 10, 50, 0.72);
+          color: #222222;
+          font-weight: 500;
         }
         .hdr-nav-pill.light-mode .hdr-nav-item:hover {
-          color: rgba(20, 10, 50, 1);
+          color: #744FE7;
         }
         .hdr-nav-pill.light-mode .hdr-nav-item.active {
-          color: #0f0824;
+          color: #ffffff;
           font-weight: 600;
         }
+
+        /* Light-mode active sliding pill */
+        .hdr-nav-pill.light-mode .hdr-sliding-pill {
+          background: linear-gradient(180deg, #8C67FE 0%, #744FE7 100%);
+          border: 1px solid rgba(255, 255, 255, 0.45);
+          box-shadow: 0 4px 14px rgba(116, 79, 231, 0.28);
+        }
+
+
+
 
         /* ── Let's Talk ── */
         .hdr-talk-cta {
@@ -572,16 +724,18 @@ export default function Header({ activeTab, onTabChange }: HeaderProps) {
             transition: "padding 0.3s ease",
           }}
         >
-          {/* Brand */}
-          <Link href="/" className="hdr-brand-link">
-            <Image src="/asset/logo.png" alt="Gelora Tech" width={34} height={34} priority className="hdr-logo-glow" />
-            <Image src="/asset/gtText.png" alt="Gelora Tech" width={124} height={42} className="hdr-brand-text" />
+          {/* Brand – glassmorphism pill */}
+          <Link href="/" className={`hdr-logo-glass${isLightBg ? " light-logo" : ""}`}>
+            <span className="hdr-brand-link">
+              <Image src="/asset/logo.png" alt="Gelora Tech" width={32} height={32} priority className="hdr-logo-glow" />
+              <Image src="/asset/gtText.png" alt="Gelora Tech" width={116} height={40} className="hdr-brand-text" />
+            </span>
           </Link>
 
           {/* Desktop nav */}
           <nav
             ref={navPillRef as React.RefObject<HTMLElement>}
-            className={`hdr-nav-pill${isLightBg ? ' light-mode' : ''}`}
+            className={`hdr-nav-pill${isLightBg ? " light-mode" : ""}`}
             aria-label="Main Navigation"
           >
             {/* Active Background Pill (melts and moves slowly side-by-side) */}
@@ -628,7 +782,7 @@ export default function Header({ activeTab, onTabChange }: HeaderProps) {
           </button>
 
           {/* Let's Talk (desktop) */}
-          <Link href="/about" className="hdr-talk-cta">
+          <Link href="/contact" className="hdr-talk-cta">
             <span className="hdr-talk-text">Let&apos;s Talk</span>
             <div className="hdr-talk-arrow">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">

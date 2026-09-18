@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import SplashScreen from "./components/SplashScreen";
+// import SplashScreen from "./components/SplashScreen";
 import HomePage from "./pages/Home/page";
 
 export default function Home() {

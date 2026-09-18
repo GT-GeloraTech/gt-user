@@ -149,20 +149,24 @@ export default function ServicesPage() {
     isLockedRef.current = false;
     setIsLocked(false);
     isUnlockingRef.current = true;
+    wheelCooldown.current = false;
     document.documentElement.classList.remove('viewport-locked');
+    document.documentElement.style.overflow = "";
+    document.body.style.overflow = "";
 
     const offsetTop = deckRef.current ? deckRef.current.offsetTop : window.scrollY;
     if (direction === "down") {
-      // Scroll past section into content below
+      // Scroll past section into content below (footer)
       window.scrollTo({ top: offsetTop + window.innerHeight * 0.45, behavior: "smooth" });
     } else {
-      // Scroll smoothly back to the top of the deck section
-      window.scrollTo({ top: Math.max(0, offsetTop - 120), behavior: "smooth" });
+      // Scroll smoothly back up to the hero section
+      window.scrollTo({ top: Math.max(0, offsetTop - window.innerHeight * 0.45), behavior: "smooth" });
     }
+    // Responsive cooldown (700ms) allows smooth scroll to settle without freezing user
     setTimeout(() => {
       isUnlockingRef.current = false;
       prevScrollY.current = window.scrollY;
-    }, 850);
+    }, 700);
   }, []);
 
   const goToStep = useCallback((idx: number) => {
@@ -174,34 +178,65 @@ export default function ServicesPage() {
   useEffect(() => {
     prevScrollY.current = window.scrollY;
 
+    // ── Force unlock helper ───────────────────────────────────────────────
+    const forceUnlock = () => {
+      if (!isLockedRef.current) return;
+      isLockedRef.current = false;
+      isUnlockingRef.current = false;
+      wheelCooldown.current = false;
+      setIsLocked(false);
+      document.documentElement.style.overflow = "";
+      document.body.style.overflow = "";
+      document.documentElement.classList.remove('viewport-locked');
+    };
+
+    let safetyTimer: ReturnType<typeof setTimeout> | null = null;
+
+    // ── Safety auto-unlock timer (8s fallback) ────────────────────────────
+    const resetSafetyTimer = () => {
+      if (safetyTimer) clearTimeout(safetyTimer);
+      safetyTimer = setTimeout(() => {
+        if (isLockedRef.current) forceUnlock();
+      }, 8000);
+    };
+
     const onResize = () => {
       if (typeof window !== "undefined" && window.innerWidth <= 1024 && isLockedRef.current) {
-        isLockedRef.current = false;
-        setIsLocked(false);
-        document.documentElement.style.overflow = "";
-        document.body.style.overflow = "";
+        forceUnlock();
       }
     };
 
     const onScroll = () => {
       if (typeof window !== "undefined" && window.innerWidth <= 1024) return;
-      if (isLockedRef.current || isUnlockingRef.current) return;
       if (!deckRef.current) return;
 
       const curY = window.scrollY;
+      const deckTop = deckRef.current.offsetTop;
+      const deckHeight = deckRef.current.offsetHeight;
+
+      // ── Self-healing: if user scrolled away from the deck, unlock immediately ──
+      // This ensures the header instantly reappears whenever user moves above/below deck
+      if (isLockedRef.current) {
+        if (curY < deckTop - 80 || curY > deckTop + deckHeight + 80) {
+          forceUnlock();
+        }
+        return;
+      }
+
+      if (isUnlockingRef.current) return;
+
       const scrollingDown = curY >= prevScrollY.current;
       prevScrollY.current = curY;
 
       const rect = deckRef.current.getBoundingClientRect();
       const targetTop = rect.top + window.scrollY;
 
+      // Only lock when scrolling DOWN from hero into deck.
+      // Do NOT lock when scrolling UP from footer — this lets user freely scroll back up with header visible!
       if (scrollingDown) {
         if (rect.top <= 40 && rect.top >= -120) {
           lockDeck(0, targetTop);
-        }
-      } else {
-        if (rect.bottom >= window.innerHeight - 40 && rect.bottom <= window.innerHeight + 120) {
-          lockDeck(TOTAL_STEPS - 1, targetTop);
+          resetSafetyTimer();
         }
       }
     };
@@ -216,8 +251,9 @@ export default function ServicesPage() {
 
       if (wheelCooldown.current) return;
       wheelCooldown.current = true;
-      // Allow extra time when entering step 3 so the title settles at top and cards smoothly enter before next wheel
-      const cooldownTime = (goingDown && cur === TITLE_STEPS - 1) ? 1700 : 1000;
+
+      // Fast, snappy cooldown (350ms for cards, 650ms for title move) — never feels stuck!
+      const cooldownTime = (goingDown && cur === TITLE_STEPS - 1) ? 650 : 350;
       setTimeout(() => { wheelCooldown.current = false; }, cooldownTime);
 
       if (goingDown) {
@@ -231,22 +267,37 @@ export default function ServicesPage() {
 
     const onKeyDown = (e: KeyboardEvent) => {
       if (typeof window !== "undefined" && window.innerWidth <= 1024) return;
+
+      // Escape key emergency unlock
+      if (e.key === "Escape" && isLockedRef.current) {
+        e.preventDefault();
+        forceUnlock();
+        return;
+      }
+
       if (!isLockedRef.current) return;
       if (wheelCooldown.current) return;
       const cur = activeStepRef.current;
       if (e.key === "ArrowDown" || e.key === "PageDown") {
         e.preventDefault();
         wheelCooldown.current = true;
-        const cooldownTime = cur === TITLE_STEPS - 1 ? 1700 : 1000;
+        const cooldownTime = cur === TITLE_STEPS - 1 ? 650 : 350;
         setTimeout(() => { wheelCooldown.current = false; }, cooldownTime);
         if (cur < TOTAL_STEPS - 1) goToStep(cur + 1);
         else unlockDeck("down");
       } else if (e.key === "ArrowUp" || e.key === "PageUp") {
         e.preventDefault();
         wheelCooldown.current = true;
-        setTimeout(() => { wheelCooldown.current = false; }, 1000);
+        setTimeout(() => { wheelCooldown.current = false; }, 350);
         if (cur > 0) goToStep(cur - 1);
         else unlockDeck("up");
+      }
+    };
+
+    // ── Page visibility: force-unlock if tab is hidden ───────────────────
+    const onVisibilityChange = () => {
+      if (document.hidden && isLockedRef.current) {
+        forceUnlock();
       }
     };
 
@@ -254,14 +305,21 @@ export default function ServicesPage() {
     window.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("wheel", onWheel, { passive: false });
     window.addEventListener("keydown", onKeyDown);
+    document.addEventListener("visibilitychange", onVisibilityChange);
 
     return () => {
       window.removeEventListener("resize", onResize);
       window.removeEventListener("scroll", onScroll);
       window.removeEventListener("wheel", onWheel);
       window.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      if (safetyTimer) clearTimeout(safetyTimer);
       document.documentElement.style.overflow = "";
       document.body.style.overflow = "";
+      document.documentElement.classList.remove('viewport-locked');
+      isLockedRef.current = false;
+      isUnlockingRef.current = false;
+      wheelCooldown.current = false;
     };
   }, [goToStep, lockDeck, unlockDeck]);
 

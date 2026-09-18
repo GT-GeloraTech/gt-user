@@ -232,6 +232,13 @@ export default function HomePage() {
     setActiveStepIndex(stepIdx);
     setPrevStepIndex(null);
     setSlideDir('none');
+
+    // Prevent immediate step trigger from the scroll action that reached this section
+    wheelCooldown.current = true;
+    setTimeout(() => {
+      wheelCooldown.current = false;
+    }, 800);
+
     document.documentElement.style.overflow = "hidden";
     document.body.style.overflow = "hidden";
     document.documentElement.classList.add('viewport-locked');
@@ -250,6 +257,7 @@ export default function HomePage() {
     isLockedRef.current = false;
     setIsLocked(false);
     isUnlockingRef.current = true;
+    wheelCooldown.current = false;
 
     document.documentElement.style.overflow = "";
     document.body.style.overflow = "";
@@ -269,7 +277,7 @@ export default function HomePage() {
     setTimeout(() => {
       isUnlockingRef.current = false;
       prevScrollY.current = window.scrollY;
-    }, 850);
+    }, 1200);
   }, []);
 
   /* ────────────────────────────────────────────────────────
@@ -285,6 +293,7 @@ export default function HomePage() {
         setIsLocked(false);
         document.documentElement.style.overflow = "";
         document.body.style.overflow = "";
+        document.documentElement.classList.remove('viewport-locked');
       }
       resetProcessTimer();
     };
@@ -321,6 +330,7 @@ export default function HomePage() {
       if (!isLockedRef.current) return;
       e.preventDefault(); // Lock page scroll
 
+      if (Math.abs(e.deltaY) < 15) return;
       if (wheelCooldown.current) return;
       wheelCooldown.current = true;
       setTimeout(() => {
@@ -378,6 +388,8 @@ export default function HomePage() {
       window.removeEventListener("keydown", onKeyDown);
       document.documentElement.style.overflow = "";
       document.body.style.overflow = "";
+      document.documentElement.classList.remove('viewport-locked');
+      isLockedRef.current = false;
     };
   }, [goToStep, lockProcess, unlockProcess, totalSteps, resetProcessTimer]);
 

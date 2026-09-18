@@ -24,6 +24,8 @@ export const metadata: Metadata = {
 };
 
 import Header from "./components/Header";
+import PageTransition from "./components/PageTransition";
+import { NavigationLoaderProvider } from "./components/PageLoader";
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -32,8 +34,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <Header />
-        {children}
+        <NavigationLoaderProvider>
+          <Header />
+          <PageTransition>{children}</PageTransition>
+        </NavigationLoaderProvider>
       </body>
     </html>
   );

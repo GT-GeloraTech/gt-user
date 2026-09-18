@@ -4,6 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import Footer from "@/app/components/Footer";
 import ApplyModal from "./ApplyModal";
+import FullStackDeveloperPage from "./FullStackDeveloper";
 
 interface TeamMember {
   name: string;
@@ -118,9 +119,28 @@ export default function CareersPage() {
   const [activeDept, setActiveDept] = useState("All departments");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalRole, setModalRole] = useState('');
+  const [selectedJob, setSelectedJob] = useState<string | null>(null);
 
   const openModal = (role = '') => { setModalRole(role); setIsModalOpen(true); };
   const closeModal = () => setIsModalOpen(false);
+
+  const handleOpportunityClick = (job: Opportunity) => {
+    if (job.title.toLowerCase().includes("full stack")) {
+      setSelectedJob("full-stack");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
+
+  if (selectedJob === "full-stack") {
+    return (
+      <FullStackDeveloperPage
+        onBack={() => {
+          setSelectedJob(null);
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        }}
+      />
+    );
+  }
 
   const filteredOpportunities =
     activeDept === "All departments"
@@ -179,29 +199,6 @@ export default function CareersPage() {
           justify-content: center;
           height: 24px;
           animation: careersFadeIn 0.8s ease-out forwards;
-        }
-
-        .careers-badge-text {
-          font-family: 'Inter', sans-serif;
-          font-style: normal;
-          font-weight: 300;
-          font-size: clamp(10px, 1.1vw, 12px);
-          line-height: 1.4;
-          letter-spacing: 0.25em;
-          color: #B09DEA;
-          text-transform: uppercase;
-          display: inline-flex;
-          align-items: center;
-          gap: 12px;
-        }
-
-        .careers-dot {
-          display: inline-block;
-          font-size: 0.6em;
-          line-height: 1;
-          color: #B09DEA;
-          opacity: 0.75;
-          transform: translateY(-1px);
         }
 
         /* ─── Heading Line 1 ─── */
@@ -1380,42 +1377,51 @@ export default function CareersPage() {
 
           {/* List of Opportunities */}
           <div className="opportunities-list">
-            {filteredOpportunities.map((job) => (
-              <div
-                key={job.id}
-                className="opportunity-card"
-                onClick={() => openModal(job.title)}
-                style={{ cursor: "pointer" }}
-                role="button"
-                tabIndex={0}
-              >
-                <div className="opportunity-card-left">
-                  <span className="opportunity-num">{job.num}</span>
-                  <div className="opportunity-details">
-                    <h3 className="opportunity-role">{job.title}</h3>
-                    <div className="opportunity-tags">
-                      <span>{job.department}</span>
-                      <span>{job.type}</span>
+            {filteredOpportunities.map((job) => {
+              const isFullStack = job.title.toLowerCase().includes("full stack");
+              return (
+                <div
+                  key={job.id}
+                  className="opportunity-card"
+                  onClick={() => handleOpportunityClick(job)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      handleOpportunityClick(job);
+                    }
+                  }}
+                  style={{ cursor: "pointer" }}
+                  role="button"
+                  tabIndex={0}
+                >
+                  <div className="opportunity-card-left">
+                    <span className="opportunity-num">{job.num}</span>
+                    <div className="opportunity-details">
+                      <h3 className="opportunity-role">{job.title}</h3>
+                      <div className="opportunity-tags">
+                        <span>{job.department}</span>
+                        <span>{job.type}</span>
+                      </div>
                     </div>
                   </div>
+                  <div className="opportunity-arrow-circle" aria-hidden="true">
+                    <svg
+                      width="15"
+                      height="15"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.4"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <line x1="7" y1="17" x2="17" y2="7" />
+                      <polyline points="7 7 17 7 17 17" />
+                    </svg>
+                  </div>
                 </div>
-                <div className="opportunity-arrow-circle" aria-hidden="true">
-                  <svg
-                    width="15"
-                    height="15"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.4"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <line x1="7" y1="17" x2="17" y2="7" />
-                    <polyline points="7 7 17 7 17 17" />
-                  </svg>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </section>

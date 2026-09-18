@@ -520,7 +520,7 @@ export default function Footer({ showCta = true }: FooterProps) {
             </p>
 
             <div className="gt-cta-btns">
-              <Link href="/about" className="gt-cta-talk-btn" onClick={(e) => handleNavToTop(e, "/about")}>
+              <Link href="/contact" className="gt-cta-talk-btn" onClick={(e) => handleNavToTop(e, "/contact")}>
                 <span className="gt-cta-talk-text">Let&apos;s Talk</span>
                 <div className="gt-cta-arrow-box">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#744FE7" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
