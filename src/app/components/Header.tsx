@@ -55,7 +55,7 @@ export default function Header({ activeTab, onTabChange }: HeaderProps) {
     selected ||
     NAV_ITEMS.find((item) => item.href === pathname || (item.href !== "/" && pathname?.startsWith(item.href)))?.name ||
     activeTab ||
-    "Home";
+    "";
 
   // Reposition the pill directly to the currently-active nav item
   const repositionPill = useCallback((tabName: string) => {
@@ -283,59 +283,84 @@ export default function Header({ activeTab, onTabChange }: HeaderProps) {
       }, 1340);
       meltTimersRef.current.push(tCleanup);
 
-      // ── Step 4: Route navigates once the slow, smooth molten flow finishes ──
-      const tNav = setTimeout(() => {
-        router.push(href);
-      }, 1420);
-      meltTimersRef.current.push(tNav);
+      // ── Step 4: Route navigates immediately so page loader shows instantly ──
+      router.push(href);
     },
     [currentTab, onTabChange, repositionPill, router]
   );
 
-  // ─── Mobile drawer portal ──────────────────────────────────────────────
+  // Navigate to contact page and scroll to the form section
+  const handleLetsTalk = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsMenuOpen(false);
+    if (pathname === "/contact") {
+      // Already on contact page — just scroll to form
+      const el = document.getElementById("contact-form");
+      if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+    } else {
+      router.push("/contact");
+      // After navigation, scroll to form once the element is available
+      const tryScroll = (attempts: number) => {
+        const el = document.getElementById("contact-form");
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "start" });
+        } else if (attempts > 0) {
+          setTimeout(() => tryScroll(attempts - 1), 120);
+        }
+      };
+      setTimeout(() => tryScroll(8), 300);
+    }
+  };
+
+  // ─── Mobile drawer portal
+  const closeMenuRef = useRef(() => setIsMenuOpen(false));
+  useEffect(() => { closeMenuRef.current = () => setIsMenuOpen(false); });
+
   const drawerPortal = mounted
     ? createPortal(
-      <>
+      <div
+        style={{
+          position: "fixed",
+          inset: 0,
+          zIndex: 9998,
+          visibility: isMenuOpen ? "visible" : "hidden",
+          pointerEvents: isMenuOpen ? "auto" : "none",
+        }}
+      >
+        {/* Backdrop — tap outside to close */}
         <div
-          onClick={() => setIsMenuOpen(false)}
+          onPointerDown={() => closeMenuRef.current()}
           style={{
-            position: "fixed", inset: 0,
+            position: "absolute", inset: 0,
             background: "rgba(4,2,18,0.55)",
-            backdropFilter: isMenuOpen ? "blur(3px)" : "none",
-            WebkitBackdropFilter: isMenuOpen ? "blur(3px)" : "none",
-            zIndex: 9998,
-            opacity: isMenuOpen ? 1 : 0,
-            pointerEvents: isMenuOpen ? "auto" : "none",
-            transition: "opacity 0.35s ease, backdrop-filter 0.35s ease",
+            backdropFilter: "blur(3px)",
+            WebkitBackdropFilter: "blur(3px)",
           }}
           aria-hidden="true"
         />
+        {/* Drawer nav */}
         <nav
           role="dialog" aria-modal="true" aria-label="Mobile Navigation"
+          onPointerDown={(e) => e.stopPropagation()}
           style={{
-            position: "fixed", top: 0, right: 0, bottom: 0,
+            position: "absolute", top: 0, right: 0, bottom: 0,
             width: "min(320px, 82vw)",
             background: "linear-gradient(160deg, rgba(18,12,45,0.98) 0%, rgba(11,9,22,0.98) 100%)",
             borderLeft: "1px solid rgba(255,255,255,0.08)",
             boxShadow: "-16px 0 60px rgba(4,2,18,0.6)",
-            zIndex: 9999, display: "flex", flexDirection: "column",
+            display: "flex", flexDirection: "column",
             transform: isMenuOpen ? "translateX(0)" : "translateX(100%)",
             transition: "transform 0.38s cubic-bezier(0.25,0.86,0.25,1)",
             overflowY: "auto",
           } as React.CSSProperties}
         >
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "20px 22px 18px", borderBottom: "1px solid rgba(255,255,255,0.07)", flexShrink: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", padding: "20px 22px 18px", borderBottom: "1px solid rgba(255,255,255,0.07)", flexShrink: 0 }}>
             <Link href="/" onClick={() => setIsMenuOpen(false)} style={{ display: "flex", alignItems: "center", gap: "10px", textDecoration: "none" }}>
               <Image src="/asset/logo.png" alt="Gelora Tech" width={30} height={30} style={{ filter: "drop-shadow(0 0 10px rgba(116,79,231,0.9))" }} />
               <Image src="/asset/gtText.png" alt="Gelora Tech" width={104} height={36} style={{ filter: "drop-shadow(0 0 8px rgba(191,239,255,0.35))" }} />
             </Link>
-            <button type="button" aria-label="Close navigation menu" onClick={() => setIsMenuOpen(false)}
-              style={{ width: 38, height: 38, border: "1px solid rgba(255,255,255,0.18)", borderRadius: "50%", background: "rgba(255,255,255,0.07)", color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
-                <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-              </svg>
-            </button>
           </div>
+
           <div style={{ display: "flex", flexDirection: "column", padding: "20px 16px", gap: "6px", flex: 1 }}>
             {NAV_ITEMS.map((item) => {
               const isActive = currentTab === item.name;
@@ -355,15 +380,16 @@ export default function Header({ activeTab, onTabChange }: HeaderProps) {
               );
             })}
           </div>
-          <Link href="/contact" onClick={() => setIsMenuOpen(false)}
-            style={{ margin: "8px 16px 32px", display: "flex", alignItems: "center", justifyContent: "center", height: "50px", borderRadius: "100px", background: "linear-gradient(133.45deg,#8C67FE 9.67%,#EAE1FF 100%)", boxShadow: "0 4px 16px rgba(94,75,142,0.38)", textDecoration: "none", fontFamily: "'Inter',sans-serif", fontWeight: 600, fontSize: "15px", color: "#fff" }}>
+          <a href="/contact" onClick={handleLetsTalk}
+            style={{ margin: "8px 16px 32px", display: "flex", alignItems: "center", justifyContent: "center", height: "50px", borderRadius: "100px", background: "linear-gradient(133.45deg,#8C67FE 9.67%,#EAE1FF 100%)", boxShadow: "0 4px 16px rgba(94,75,142,0.38)", textDecoration: "none", fontFamily: "'Inter',sans-serif", fontWeight: 600, fontSize: "15px", color: "#fff", cursor: "pointer" }}>
             Let&apos;s Talk
-          </Link>
+          </a>
         </nav>
-      </>,
+      </div>,
       document.body
     )
     : null;
+
 
   return (
     <>
@@ -683,10 +709,18 @@ export default function Header({ activeTab, onTabChange }: HeaderProps) {
         }
         @media (max-width: 760px) {
           .hdr-fixed-header { min-height: 56px !important; }
-          .hdr-header-inner { padding-top: 12px !important; min-height: 56px !important; }
-          .hdr-menu-toggle { display: flex; }
+          .hdr-header-inner {
+            padding-top: 12px !important;
+            min-height: 56px !important;
+            justify-content: flex-end !important;
+          }
+          .hdr-menu-toggle {
+            display: flex;
+            margin-left: auto;
+          }
           .hdr-nav-pill    { display: none !important; }
           .hdr-talk-cta   { display: none; }
+          .hdr-logo-glass  { display: none !important; }
         }
         @media (max-width: 420px) {
           .hdr-brand-text { width: 104px; margin-left: 0; }
@@ -782,7 +816,7 @@ export default function Header({ activeTab, onTabChange }: HeaderProps) {
           </button>
 
           {/* Let's Talk (desktop) */}
-          <Link href="/contact" className="hdr-talk-cta">
+          <a href="/contact" onClick={handleLetsTalk} className="hdr-talk-cta">
             <span className="hdr-talk-text">Let&apos;s Talk</span>
             <div className="hdr-talk-arrow">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
@@ -790,7 +824,7 @@ export default function Header({ activeTab, onTabChange }: HeaderProps) {
                 <polyline points="7 7 17 7 17 17" />
               </svg>
             </div>
-          </Link>
+          </a>
         </div>
       </header>
     </>

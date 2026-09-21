@@ -197,7 +197,7 @@ export default function ApplyModal({ isOpen, onClose, defaultRole = '' }: ApplyM
           bottom: 0;
           width: 100vw;
           height: 100vh;
-          z-index: 999999;
+          z-index: 1000001;
           background: rgba(10, 8, 24, 0.72);
           backdrop-filter: blur(6px);
           -webkit-backdrop-filter: blur(6px);

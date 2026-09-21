@@ -344,6 +344,19 @@ export default function Footer({ showCta = true }: FooterProps) {
         .gt-footer-contact-item svg {
           flex-shrink: 0;
         }
+        .gt-footer-contact-icon {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+        }
+        .gt-footer-contact-text {
+          display: flex;
+          flex-direction: column;
+        }
+        .gt-footer-contact-label {
+          display: none;
+        }
         .gt-footer-email-link {
           color: rgba(225, 218, 245, 0.85);
           text-decoration: underline;
@@ -443,38 +456,211 @@ export default function Footer({ showCta = true }: FooterProps) {
         }
 
         @media (max-width: 640px) {
+          .gt-footer-inner {
+            padding: 42px 20px 0;
+          }
+          .gt-cta-wrapper {
+            min-height: auto;
+            padding: 38px 16px;
+          }
+          .gt-cta-card {
+            min-height: auto;
+            border-radius: 24px;
+            padding: 34px 18px;
+          }
+          .gt-cta-headline {
+            font-size: clamp(24px, 6.8vw, 34px);
+            line-height: 1.2;
+            margin-bottom: 12px;
+          }
+          .gt-cta-subtext {
+            font-size: 13.5px;
+            line-height: 22px;
+            margin-bottom: 22px;
+          }
           .gt-cta-btns {
             flex-direction: column;
             width: 100%;
-            max-width: 360px;
+            max-width: 320px;
             margin: 0 auto;
-            gap: 14px;
+            gap: 12px;
           }
           .gt-cta-talk-btn {
             width: 100%;
+            height: 48px;
             justify-content: center;
-            gap: 12px;
-            padding: 4px 16px;
+            gap: 10px;
+            padding: 4px 14px;
           }
           .gt-cta-explore-btn {
             width: 100%;
+            height: 48px;
             justify-content: center;
           }
+
+          /* ── Mobile Footer Grid: 2-column layout for navigation, full-width brand and contact ── */
           .gt-footer-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 26px 18px;
+            padding-bottom: 20px;
+          }
+
+          /* Brand Section */
+          .gt-footer-col-brand {
+            grid-column: 1 / -1;
+            padding-bottom: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+          }
+          .gt-footer-brand-wrap {
+            gap: 10px;
+          }
+          .gt-footer-logo-img {
+            width: 46px;
+            height: 46px;
+          }
+          .gt-footer-brand-text {
+            width: 132px;
+          }
+          .gt-footer-brand-desc {
+            margin: 12px 0 0 0;
+            font-size: 13px;
+            line-height: 1.55;
+            color: rgba(225, 218, 245, 0.72);
+            max-width: 100%;
+          }
+
+          /* Navigation: Explore & Services side-by-side */
+          .gt-footer-col-explore {
+            grid-column: 1 / 2;
+          }
+          .gt-footer-col-services {
+            grid-column: 2 / 3;
+          }
+          .gt-footer-col-title {
+            font-size: 12.5px;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            margin: 0 0 14px 0;
+            color: #b69afa;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+          }
+          .gt-footer-col-title::after {
+            content: '';
+            display: inline-block;
+            width: 14px;
+            height: 1.5px;
+            background: rgba(182, 154, 250, 0.45);
+            border-radius: 2px;
+          }
+          .gt-footer-links-list {
+            gap: 10px;
+          }
+          .gt-footer-links-list a {
+            font-size: 13.5px;
+            line-height: 1.35;
+            padding: 3px 0;
+            color: rgba(235, 230, 252, 0.82);
+            display: inline-flex;
+            align-items: center;
+            transition: color 0.15s ease, transform 0.15s ease;
+          }
+          .gt-footer-links-list a:active {
+            color: #ffffff;
+            transform: translateX(3px);
+          }
+
+          /* Contact Column */
+          .gt-footer-col-contact {
+            grid-column: 1 / -1;
+            padding-top: 18px;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+          }
+          .gt-footer-contacts-list {
+            display: grid;
             grid-template-columns: 1fr;
-            gap: 32px;
+            gap: 10px;
+          }
+          .gt-footer-contact-item {
+            background: rgba(255, 255, 255, 0.035);
+            border: 1px solid rgba(167, 139, 250, 0.16);
+            border-radius: 14px;
+            padding: 10px 14px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+            transition: background 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+          }
+          .gt-footer-contact-item:active {
+            background: rgba(167, 139, 250, 0.14);
+            border-color: rgba(167, 139, 250, 0.4);
+            transform: scale(0.99);
+          }
+          .gt-footer-contact-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            background: rgba(147, 95, 238, 0.18);
+            border: 1px solid rgba(167, 139, 250, 0.25);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+          }
+          .gt-footer-contact-text {
+            display: flex;
+            flex-direction: column;
+            gap: 1px;
+            min-width: 0;
+          }
+          .gt-footer-contact-label {
+            display: block;
+            font-size: 10.5px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: rgba(182, 154, 250, 0.75);
+            font-weight: 600;
+          }
+          .gt-footer-contact-text span:not(.gt-footer-contact-label),
+          .gt-footer-email-link {
+            font-size: 13.5px;
+            color: rgba(245, 242, 255, 0.95);
+            font-weight: 500;
+            text-decoration: none;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+          }
+
+          /* Bottom Bar */
+          .gt-footer-bottom-wrap {
+            border-top: 1px solid rgba(167, 139, 250, 0.12);
+            padding-top: 18px;
+            margin-top: 10px;
           }
           .gt-footer-bottom {
             flex-direction: column;
-            align-items: flex-start;
-            gap: 14px;
-            padding: 0 clamp(24px, 6.8vw, 75px) 32px;
+            align-items: center;
+            text-align: center;
+            gap: 12px;
+            padding: 0 20px 28px;
+          }
+          .gt-footer-bottom p {
+            font-size: 12px;
+            color: rgba(215, 206, 240, 0.6);
           }
           .gt-footer-legal-links {
             display: flex;
             align-items: center;
-            gap: 12px;
-            flex-wrap: wrap;
+            justify-content: center;
+            gap: 14px;
+            font-size: 12px;
+          }
+          .gt-footer-legal-links a {
+            color: rgba(215, 206, 240, 0.75);
           }
         }
       `}</style>
@@ -543,7 +729,7 @@ export default function Footer({ showCta = true }: FooterProps) {
           {/* 4-column grid */}
           <div className="gt-footer-grid">
             {/* Brand */}
-            <div className="gt-footer-col">
+            <div className="gt-footer-col gt-footer-col-brand">
               <Link
                 href="/"
                 className="gt-footer-brand-wrap"
@@ -559,7 +745,7 @@ export default function Footer({ showCta = true }: FooterProps) {
             </div>
 
             {/* EXPLORE */}
-            <div className="gt-footer-col">
+            <div className="gt-footer-col gt-footer-col-explore">
               <h4 className="gt-footer-col-title">EXPLORE</h4>
               <ul className="gt-footer-links-list">
                 <li><Link href="/" onClick={(e) => handleNavToTop(e, "/")}>Home</Link></li>
@@ -571,7 +757,7 @@ export default function Footer({ showCta = true }: FooterProps) {
             </div>
 
             {/* SERVICES */}
-            <div className="gt-footer-col">
+            <div className="gt-footer-col gt-footer-col-services">
               <h4 className="gt-footer-col-title">SERVICES</h4>
               <ul className="gt-footer-links-list">
                 <li><Link href="/services" onClick={(e) => handleNavToTop(e, "/services")}>Web Development</Link></li>
@@ -583,30 +769,43 @@ export default function Footer({ showCta = true }: FooterProps) {
             </div>
 
             {/* LET'S CONNECT */}
-            <div className="gt-footer-col">
+            <div className="gt-footer-col gt-footer-col-contact">
               <h4 className="gt-footer-col-title">LET&apos;S CONNECT</h4>
               <div className="gt-footer-contacts-list">
                 <a href="mailto:hello@geloratech.com" className="gt-footer-contact-item">
-                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#9B82F3" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                    <rect width="20" height="16" x="2" y="4" rx="2" />
-                    <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
-                  </svg>
-                  <span className="gt-footer-email-link">hello@geloratech.com</span>
+                  <div className="gt-footer-contact-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#B69AFA" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <rect width="20" height="16" x="2" y="4" rx="2" />
+                      <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+                    </svg>
+                  </div>
+                  <div className="gt-footer-contact-text">
+                    <span className="gt-footer-contact-label">Email Us</span>
+                    <span className="gt-footer-email-link">hello@geloratech.com</span>
+                  </div>
+                </a>
+                <a href="tel:+917976143735" className="gt-footer-contact-item">
+                  <div className="gt-footer-contact-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#B69AFA" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+                    </svg>
+                  </div>
+                  <div className="gt-footer-contact-text">
+                    <span className="gt-footer-contact-label">Call Us</span>
+                    <span>+91 - 7976143735</span>
+                  </div>
                 </a>
                 <div className="gt-footer-contact-item">
-                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#9B82F3" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                    <polyline points="23 7 23 1 17 1" />
-                    <line x1="16" y1="8" x2="23" y2="1" />
-                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
-                  </svg>
-                  <span>+91 - 7976143735</span>
-                </div>
-                <div className="gt-footer-contact-item">
-                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#9B82F3" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                    <path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0" />
-                    <circle cx="12" cy="10" r="3" />
-                  </svg>
-                  <span>Udaipur, Rajasthan</span>
+                  <div className="gt-footer-contact-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#B69AFA" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0" />
+                      <circle cx="12" cy="10" r="3" />
+                    </svg>
+                  </div>
+                  <div className="gt-footer-contact-text">
+                    <span className="gt-footer-contact-label">Location</span>
+                    <span>Udaipur, Rajasthan</span>
+                  </div>
                 </div>
               </div>
             </div>

@@ -1437,6 +1437,11 @@ export default function HomePage() {
 
         /* Show carousel, hide desktop canvas on tablet/mobile */
         @media (max-width: 860px) {
+          .home-hero {
+            padding-top: 84px !important;
+            height: auto !important;
+            min-height: 680px;
+          }
           .home-hero-canvas { display: none !important; }
           .hero-carousel {
             display: flex;
@@ -1447,12 +1452,22 @@ export default function HomePage() {
             box-sizing: border-box;
             position: relative;
             z-index: 5;
-            margin-top: 12px;
+            margin-top: 4px;
           }
           .hero-carousel .hero-title-container {
             pointer-events: auto;
             user-select: auto;
             text-align: center;
+            margin-bottom: 24px !important;
+          }
+          .hero-carousel .title-line-1,
+          .hero-carousel .title-line-2 {
+            font-size: clamp(28px, 7.5vw, 44px);
+            line-height: 1.18;
+            white-space: normal;
+          }
+          .hero-carousel .title-line-2 {
+            margin-top: 6px;
           }
           .hero-carousel-track {
             width: min(280px, 80vw);
@@ -1461,9 +1476,17 @@ export default function HomePage() {
         }
 
         @media (max-width: 560px) {
+          .home-hero {
+            padding-top: 88px !important;
+          }
           .hero-carousel {
-            padding: 12px 16px 22px;
-            margin-top: 8px;
+            padding: 8px 16px 22px;
+            margin-top: 0;
+          }
+          .hero-carousel .title-line-1,
+          .hero-carousel .title-line-2 {
+            font-size: clamp(24px, 7vw, 34px);
+            line-height: 1.2;
           }
           .hero-carousel-track {
             width: min(255px, 78vw);
@@ -1472,6 +1495,10 @@ export default function HomePage() {
         }
 
         @media (max-width: 380px) {
+          .hero-carousel .title-line-1,
+          .hero-carousel .title-line-2 {
+            font-size: 22px;
+          }
           .hero-carousel-track {
             width: min(220px, 80vw);
             height: 270px;

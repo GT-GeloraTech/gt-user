@@ -910,8 +910,8 @@ export default function AboutPage() {
           <Image
             src="/asset/aboutImg.png"
             alt="Gelora Tech strategy, design, technology and growth framework"
-            width={1161}
-            height={619}
+            width={1376}
+            height={768}
             priority
             className="about-img"
           />

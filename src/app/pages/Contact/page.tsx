@@ -15,10 +15,23 @@ export default function ContactPage() {
   });
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [contactError, setContactError] = useState("");
+
+  // Derived: if either field has a value, the other becomes optional
+  const emailFilled = formData.email.trim().length > 0;
+  const phoneFilled = formData.phone.trim().length > 0;
+  const emailPlaceholder = phoneFilled ? "Email Address (optional)" : "Email Address";
+  const phonePlaceholder = emailFilled ? "Phone Number (optional)" : "Phone Number";
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.agreed) return;
+    // At least one of email or phone is required
+    if (!emailFilled && !phoneFilled) {
+      setContactError("Please enter at least your Email Address or Phone Number.");
+      return;
+    }
+    setContactError("");
     setIsSubmitting(true);
     setTimeout(() => {
       setIsSubmitting(false);
@@ -520,6 +533,9 @@ export default function ContactPage() {
         </p>
       </section>
 
+      {/* Scroll anchor: sits above the light section so cards are visible when scrolled to */}
+      <div id="contact-form" style={{ position: "relative", top: "-100px", pointerEvents: "none", height: 0, overflow: "hidden" }} aria-hidden="true" />
+
       {/* ── LIGHT SECTION (cards + form) ── */}
       <div className="contact-light-section">
 
@@ -626,26 +642,31 @@ export default function ContactPage() {
                     />
                   </div>
 
-                  {/* Email Address */}
+                  {/* Email Address — optional if phone filled */}
                   <input
                     id="contact-email"
                     type="email"
-                    required
-                    placeholder="Email Address"
+                    placeholder={emailPlaceholder}
                     className="contact-field"
                     value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    onChange={(e) => {
+                      setFormData({ ...formData, email: e.target.value });
+                      setContactError("");
+                    }}
                   />
 
-                  {/* Phone + Service */}
+                  {/* Phone + Service — phone optional if email filled */}
                   <div className="contact-form-row">
                     <input
                       id="contact-phone"
                       type="tel"
-                      placeholder="Phone Number"
+                      placeholder={phonePlaceholder}
                       className="contact-field"
                       value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      onChange={(e) => {
+                        setFormData({ ...formData, phone: e.target.value });
+                        setContactError("");
+                      }}
                     />
                     <input
                       id="contact-service"
@@ -656,6 +677,13 @@ export default function ContactPage() {
                       onChange={(e) => setFormData({ ...formData, service: e.target.value })}
                     />
                   </div>
+
+                  {/* Inline error when neither email nor phone provided */}
+                  {contactError && (
+                    <p style={{ color: "#E55", fontSize: "13px", marginTop: "-4px", marginBottom: "2px" }}>
+                      {contactError}
+                    </p>
+                  )}
 
                   {/* Project Description */}
                   <textarea

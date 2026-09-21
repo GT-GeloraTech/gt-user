@@ -131,42 +131,60 @@ export default function ServicesPage() {
   };
 
   /* ── lock / unlock ── */
+  /** Lock the viewport onto the services deck section at a given step (Desktop > 1024px only) */
   const lockDeck = useCallback((stepIdx: number, targetTop?: number) => {
+    // Mobile and tablet devices must NEVER lock viewport or hijack scroll
     if (typeof window !== "undefined" && window.innerWidth <= 1024) return;
     if (isLockedRef.current) return;
     isLockedRef.current = true;
     setIsLocked(true);
     activeStepRef.current = stepIdx;
     setActiveStep(stepIdx);
+
+    // Prevent immediate step trigger from the scroll action that reached this section
+    wheelCooldown.current = true;
+    setTimeout(() => {
+      wheelCooldown.current = false;
+    }, 800);
+
+    document.documentElement.style.overflow = "hidden";
+    document.body.style.overflow = "hidden";
     document.documentElement.classList.add('viewport-locked');
     if (typeof targetTop === "number") {
-      window.scrollTo({ top: targetTop, behavior: "smooth" });
+      window.scrollTo({ top: targetTop, behavior: "instant" });
     }
   }, []);
 
+  /**
+   * Release the viewport lock and allow natural scroll to proceed.
+   * direction: 'down' → user completed all service steps and scrolls into content below (footer)
+   *            'up'   → user scrolled up from step 0 back to top content (hero)
+   */
   const unlockDeck = useCallback((direction: "down" | "up") => {
     if (!isLockedRef.current) return;
     isLockedRef.current = false;
     setIsLocked(false);
     isUnlockingRef.current = true;
     wheelCooldown.current = false;
-    document.documentElement.classList.remove('viewport-locked');
+
     document.documentElement.style.overflow = "";
     document.body.style.overflow = "";
+    document.documentElement.classList.remove('viewport-locked');
 
     const offsetTop = deckRef.current ? deckRef.current.offsetTop : window.scrollY;
     if (direction === "down") {
-      // Scroll past section into content below (footer)
+      // Smoothly scroll down past the section into content below (footer)
       window.scrollTo({ top: offsetTop + window.innerHeight * 0.45, behavior: "smooth" });
     } else {
-      // Scroll smoothly back up to the hero section
+      // Smoothly scroll up above the section into hero section
       window.scrollTo({ top: Math.max(0, offsetTop - window.innerHeight * 0.45), behavior: "smooth" });
     }
-    // Responsive cooldown (700ms) allows smooth scroll to settle without freezing user
+
+    // Cooldown prevents immediately re-locking while smooth scroll moves the viewport
     setTimeout(() => {
       isUnlockingRef.current = false;
       prevScrollY.current = window.scrollY;
-    }, 700);
+    }, 1200);
   }, []);
 
   const goToStep = useCallback((idx: number) => {
@@ -178,100 +196,84 @@ export default function ServicesPage() {
   useEffect(() => {
     prevScrollY.current = window.scrollY;
 
-    // ── Force unlock helper ───────────────────────────────────────────────
-    const forceUnlock = () => {
-      if (!isLockedRef.current) return;
-      isLockedRef.current = false;
-      isUnlockingRef.current = false;
-      wheelCooldown.current = false;
-      setIsLocked(false);
-      document.documentElement.style.overflow = "";
-      document.body.style.overflow = "";
-      document.documentElement.classList.remove('viewport-locked');
-    };
-
-    let safetyTimer: ReturnType<typeof setTimeout> | null = null;
-
-    // ── Safety auto-unlock timer (8s fallback) ────────────────────────────
-    const resetSafetyTimer = () => {
-      if (safetyTimer) clearTimeout(safetyTimer);
-      safetyTimer = setTimeout(() => {
-        if (isLockedRef.current) forceUnlock();
-      }, 8000);
-    };
-
-    const onResize = () => {
+    const handleResize = () => {
       if (typeof window !== "undefined" && window.innerWidth <= 1024 && isLockedRef.current) {
-        forceUnlock();
+        isLockedRef.current = false;
+        setIsLocked(false);
+        document.documentElement.style.overflow = "";
+        document.body.style.overflow = "";
+        document.documentElement.classList.remove('viewport-locked');
       }
     };
 
+    /** Detects when the user scrolls into the deck section from top or bottom (Desktop only) */
     const onScroll = () => {
       if (typeof window !== "undefined" && window.innerWidth <= 1024) return;
+      if (isLockedRef.current || isUnlockingRef.current) return;
       if (!deckRef.current) return;
 
       const curY = window.scrollY;
-      const deckTop = deckRef.current.offsetTop;
-      const deckHeight = deckRef.current.offsetHeight;
-
-      // ── Self-healing: if user scrolled away from the deck, unlock immediately ──
-      // This ensures the header instantly reappears whenever user moves above/below deck
-      if (isLockedRef.current) {
-        if (curY < deckTop - 80 || curY > deckTop + deckHeight + 80) {
-          forceUnlock();
-        }
-        return;
-      }
-
-      if (isUnlockingRef.current) return;
-
       const scrollingDown = curY >= prevScrollY.current;
       prevScrollY.current = curY;
 
       const rect = deckRef.current.getBoundingClientRect();
-      const targetTop = rect.top + window.scrollY;
+      const offsetTop = deckRef.current.offsetTop;
 
-      // Only lock when scrolling DOWN from hero into deck.
-      // Do NOT lock when scrolling UP from footer — this lets user freely scroll back up with header visible!
       if (scrollingDown) {
-        if (rect.top <= 40 && rect.top >= -120) {
-          lockDeck(0, targetTop);
-          resetSafetyTimer();
+        // Scrolling DOWN into section from above: lock at Step 0
+        if (rect.top <= 25 && rect.top >= -80) {
+          lockDeck(0, offsetTop);
+        }
+      } else {
+        // Scrolling UP into section from below: lock at last step (TOTAL_STEPS - 1)
+        if (rect.bottom >= window.innerHeight - 25 && rect.bottom <= window.innerHeight + 80) {
+          lockDeck(TOTAL_STEPS - 1, offsetTop);
         }
       }
     };
 
+    /** Intercepts wheel events while locked to cycle through steps in place (Desktop only) */
     const onWheel = (e: WheelEvent) => {
       if (typeof window !== "undefined" && window.innerWidth <= 1024) return;
       if (!isLockedRef.current) return;
-      e.preventDefault();
+      e.preventDefault(); // Lock page scroll
+
+      if (Math.abs(e.deltaY) < 15) return;
+      if (wheelCooldown.current) return;
+      wheelCooldown.current = true;
+      setTimeout(() => {
+        wheelCooldown.current = false;
+      }, 950);
 
       const goingDown = e.deltaY > 0;
       const cur = activeStepRef.current;
 
-      if (wheelCooldown.current) return;
-      wheelCooldown.current = true;
-
-      // Fast, snappy cooldown (350ms for cards, 650ms for title move) — never feels stuck!
-      const cooldownTime = (goingDown && cur === TITLE_STEPS - 1) ? 650 : 350;
-      setTimeout(() => { wheelCooldown.current = false; }, cooldownTime);
-
       if (goingDown) {
-        if (cur < TOTAL_STEPS - 1) goToStep(cur + 1);
-        else unlockDeck("down");
+        if (cur < TOTAL_STEPS - 1) {
+          goToStep(cur + 1);
+        } else {
+          // All steps completed going down → unlock downward to reveal footer
+          unlockDeck("down");
+        }
       } else {
-        if (cur > 0) goToStep(cur - 1);
-        else unlockDeck("up");
+        // Scrolling UP
+        if (cur > 0) {
+          goToStep(cur - 1);
+        } else {
+          // At Step 0 and scrolling UP → unlock upward to reveal hero section
+          unlockDeck("up");
+        }
       }
     };
 
+    /** Keyboard navigation while locked */
     const onKeyDown = (e: KeyboardEvent) => {
       if (typeof window !== "undefined" && window.innerWidth <= 1024) return;
 
       // Escape key emergency unlock
       if (e.key === "Escape" && isLockedRef.current) {
         e.preventDefault();
-        forceUnlock();
+        unlockDeck("down");
         return;
       }
 
@@ -281,39 +283,28 @@ export default function ServicesPage() {
       if (e.key === "ArrowDown" || e.key === "PageDown") {
         e.preventDefault();
         wheelCooldown.current = true;
-        const cooldownTime = cur === TITLE_STEPS - 1 ? 650 : 350;
-        setTimeout(() => { wheelCooldown.current = false; }, cooldownTime);
+        setTimeout(() => { wheelCooldown.current = false; }, 800);
         if (cur < TOTAL_STEPS - 1) goToStep(cur + 1);
         else unlockDeck("down");
       } else if (e.key === "ArrowUp" || e.key === "PageUp") {
         e.preventDefault();
         wheelCooldown.current = true;
-        setTimeout(() => { wheelCooldown.current = false; }, 350);
+        setTimeout(() => { wheelCooldown.current = false; }, 800);
         if (cur > 0) goToStep(cur - 1);
         else unlockDeck("up");
       }
     };
 
-    // ── Page visibility: force-unlock if tab is hidden ───────────────────
-    const onVisibilityChange = () => {
-      if (document.hidden && isLockedRef.current) {
-        forceUnlock();
-      }
-    };
-
-    window.addEventListener("resize", onResize);
+    window.addEventListener("resize", handleResize);
     window.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("wheel", onWheel, { passive: false });
     window.addEventListener("keydown", onKeyDown);
-    document.addEventListener("visibilitychange", onVisibilityChange);
 
     return () => {
-      window.removeEventListener("resize", onResize);
+      window.removeEventListener("resize", handleResize);
       window.removeEventListener("scroll", onScroll);
       window.removeEventListener("wheel", onWheel);
       window.removeEventListener("keydown", onKeyDown);
-      document.removeEventListener("visibilitychange", onVisibilityChange);
-      if (safetyTimer) clearTimeout(safetyTimer);
       document.documentElement.style.overflow = "";
       document.body.style.overflow = "";
       document.documentElement.classList.remove('viewport-locked');
@@ -329,14 +320,17 @@ export default function ServicesPage() {
   };
   const onTouchEnd = (e: React.TouchEvent) => {
     if (touchStartY.current === null) return;
-    const diff = touchStartY.current - e.changedTouches[0].clientY;
+    const diffY = touchStartY.current - e.changedTouches[0].clientY;
     touchStartY.current = null;
-    if (Math.abs(diff) < 40) return;
+    if (typeof window !== "undefined" && window.innerWidth <= 1024) return;
+    if (Math.abs(diffY) < 40) return;
     const cur = activeStepRef.current;
-    if (diff > 0) {
+    if (diffY > 0) {
       if (cur < TOTAL_STEPS - 1) goToStep(cur + 1);
+      else unlockDeck("down");
     } else {
       if (cur > 0) goToStep(cur - 1);
+      else unlockDeck("up");
     }
   };
 
@@ -403,6 +397,10 @@ export default function ServicesPage() {
           align-items: center;
           overflow: hidden;
           z-index: 2;
+        }
+
+        .services-hero-spacer {
+          height: 64px;
         }
 
         .services-hero {
@@ -739,7 +737,8 @@ export default function ServicesPage() {
         }
 
         @media (max-width: 1024px) {
-          .services-hero-screen { padding-top: clamp(88px, 12vh, 130px); height: auto; min-height: auto; padding-bottom: 30px; }
+          .services-hero-spacer { display: none !important; }
+          .services-hero-screen { padding-top: 80px !important; height: auto; min-height: auto; padding-bottom: 24px; }
           .services-graphic-wrapper { position: relative; bottom: auto; left: auto; transform: none; height: clamp(220px, 50vw, 360px); margin-top: 16px; }
           .services-eyebrow { margin-top: 0; margin-bottom: 12px; }
 
@@ -926,6 +925,7 @@ export default function ServicesPage() {
         }
 
         @media (max-width: 480px) {
+          .services-hero-screen { padding-top: 72px !important; }
           .services-eyebrow { font-size: 11px; letter-spacing: 0.14em; margin-top: 20px; }
           .services-desc { font-size: 13px; }
           .svc-carousel-track {
@@ -945,7 +945,7 @@ export default function ServicesPage() {
 
         {/* ── Hero Viewport Screen ── */}
         <div className="services-hero-screen">
-          <div style={{ height: "64px" }} aria-hidden="true" />
+          <div className="services-hero-spacer" aria-hidden="true" />
 
           <section className="services-hero" aria-labelledby="services-hero-heading">
             <h1 id="services-hero-heading" className="services-title">

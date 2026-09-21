@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { useEffect, useState, createContext, useContext } from "react";
+import { useEffect, useState, useRef, createContext, useContext } from "react";
 
 /* ──────────────────────────────────────────────────────────────────────────
  * Loader Context — lets any component programmatically trigger the loader
@@ -259,61 +259,37 @@ export function NavigationLoaderProvider({ children }: { children: React.ReactNo
   const pathname = usePathname();
   // Show loader on initial page load and refresh
   const [isLoading, setIsLoading] = useState(true);
+  const lastMailClickTime = useRef<number>(0);
 
-  // Automatically dismiss loader after initial page mount or refresh
+  // Automatically dismiss loader immediately after initial page mount (no artificial delay)
   useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 450);
-    return () => clearTimeout(timer);
+    setIsLoading(false);
   }, []);
 
   // Show loader when user reloads / refreshes the page
   useEffect(() => {
     const handleBeforeUnload = () => {
+      // Don't show loader if unload was triggered by mailto / tel link
+      const activeEl = document.activeElement as HTMLElement | null;
+      if (activeEl) {
+        const anchor = activeEl.closest("a");
+        const href = anchor?.getAttribute("href");
+        if (href && (href.startsWith("mailto:") || href.startsWith("tel:"))) {
+          return;
+        }
+      }
+      if (Date.now() - lastMailClickTime.current < 3000) {
+        return;
+      }
       setIsLoading(true);
     };
     window.addEventListener("beforeunload", handleBeforeUnload);
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, []);
 
-  // Hide loader after pathname changes (new page mounted)
+  // Hide loader immediately after pathname changes (new page mounted)
   useEffect(() => {
-    if (isLoading) {
-      const timer = setTimeout(() => setIsLoading(false), 320);
-      return () => clearTimeout(timer);
-    }
-  }, [pathname]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Global capture-phase click listener for all internal <a> elements
-  useEffect(() => {
-    const handleClick = (e: MouseEvent) => {
-      const anchor = (e.target as HTMLElement)?.closest("a");
-      if (!anchor) return;
-
-      const href = anchor.getAttribute("href");
-      if (!href) return;
-
-      if (
-        href.startsWith("#") ||
-        href.startsWith("mailto:") ||
-        href.startsWith("tel:") ||
-        anchor.target === "_blank" ||
-        anchor.hasAttribute("download") ||
-        e.ctrlKey || e.metaKey || e.shiftKey || e.defaultPrevented
-      ) return;
-
-      try {
-        const target = new URL(href, window.location.href);
-        const current = new URL(window.location.href);
-        if (target.origin === current.origin && target.pathname !== current.pathname) {
-          setIsLoading(true);
-        }
-      } catch {
-        if (href.startsWith("/") && href !== pathname) setIsLoading(true);
-      }
-    };
-
-    document.addEventListener("click", handleClick, true);
-    return () => document.removeEventListener("click", handleClick, true);
+    setIsLoading(false);
   }, [pathname]);
 
   return (
