@@ -571,6 +571,17 @@ export default function CareersPage() {
           color: #744FE7;
         }
 
+        .opportunities-empty {
+          margin: 12px 0 28px;
+          padding: 20px 18px 8px;
+          font-family: 'Inter', sans-serif;
+          font-weight: 500;
+          font-size: clamp(18px, 1.6vw, 20px);
+          line-height: 1.5;
+          color: #3A3555;
+          text-align: center;
+        }
+
         .opportunities-tabs-row {
           display: flex;
           flex-wrap: wrap;
@@ -1356,7 +1367,10 @@ export default function CareersPage() {
             Find where <span className="opportunities-title-italic">you fit.</span>
           </h2>
 
-          {/* Filter Tabs */}
+          <p className="opportunities-empty">No openings available at the moment.</p>
+
+          {/*
+          Filter Tabs
           <div className="opportunities-tabs-row" role="tablist">
             {DEPARTMENTS.map((dept) => {
               const isActive = activeDept === dept;
@@ -1375,7 +1389,7 @@ export default function CareersPage() {
             })}
           </div>
 
-          {/* List of Opportunities */}
+          List of Opportunities
           <div className="opportunities-list">
             {filteredOpportunities.map((job) => {
               const isFullStack = job.title.toLowerCase().includes("full stack");
@@ -1423,6 +1437,7 @@ export default function CareersPage() {
               );
             })}
           </div>
+          */}
         </div>
       </section>
 

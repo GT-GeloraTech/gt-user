@@ -6,5 +6,7 @@ export const PAGE_TITLES = {
 	PRODUCT: "Product | Gelora Tech",
 	PROJECTS: "Projects | Gelora Tech",
 	SERVICES: "Services | Gelora Tech",
+	TERMS: "Terms & Conditions | Gelora Tech",
+	PRIVACY: "Privacy Policy | Gelora Tech",
 } as const;
 

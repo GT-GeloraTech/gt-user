@@ -23,20 +23,34 @@ export default function ContactPage() {
   const emailPlaceholder = phoneFilled ? "Email Address (optional)" : "Email Address";
   const phonePlaceholder = emailFilled ? "Phone Number (optional)" : "Phone Number";
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.agreed) return;
-    // At least one of email or phone is required
     if (!emailFilled && !phoneFilled) {
       setContactError("Please enter at least your Email Address or Phone Number.");
       return;
     }
     setContactError("");
     setIsSubmitting(true);
-    setTimeout(() => {
-      setIsSubmitting(false);
+    try {
+      const response = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
+      const payload = (await response.json().catch(() => null)) as
+        | { ok?: boolean; error?: string }
+        | null;
+      if (!response.ok || !payload?.ok) {
+        setContactError(payload?.error || "Something went wrong. Please try again.");
+        return;
+      }
       setIsSubmitted(true);
-    }, 600);
+    } catch {
+      setContactError("Something went wrong. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -615,7 +629,7 @@ export default function ContactPage() {
                 <div className="contact-success-box">
                   <h4 className="contact-success-title">Thank you for reaching out!</h4>
                   <p className="contact-success-desc">
-                    We&apos;ve received your message and will get back to you within one business day.
+                    We&apos;ve received your message and will be in touch.
                   </p>
                 </div>
               ) : (

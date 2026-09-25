@@ -10,7 +10,7 @@ interface ApplyModalProps {
 }
 
 const ALLOWED_EXTENSIONS = ['.pdf', '.doc', '.docx'];
-const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
+const MAX_FILE_SIZE_BYTES = 4 * 1024 * 1024;
 
 export default function ApplyModal({ isOpen, onClose, defaultRole = '' }: ApplyModalProps) {
   const [mounted, setMounted] = useState(false);
@@ -34,6 +34,7 @@ export default function ApplyModal({ isOpen, onClose, defaultRole = '' }: ApplyM
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -96,7 +97,7 @@ export default function ApplyModal({ isOpen, onClose, defaultRole = '' }: ApplyM
       setResumeFile(null);
       setErrors((prev) => ({
         ...prev,
-        resume: 'File size exceeds 10MB limit. Please choose a smaller file.',
+        resume: 'File size exceeds 4MB limit. Please choose a smaller file.',
       }));
       return;
     }
@@ -165,23 +166,56 @@ export default function ApplyModal({ isOpen, onClose, defaultRole = '' }: ApplyM
     }
 
     if (!resumeFile) {
-      newErrors.resume = 'Resume (PDF, DOC, DOCX up to 10MB) is required';
+      newErrors.resume = 'Resume (PDF, DOC, DOCX up to 4MB) is required';
     }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validateForm()) {
+    if (!validateForm() || !resumeFile || isSubmitting) {
       return;
     }
-    setSubmitted(true);
-    setTimeout(() => {
-      setSubmitted(false);
-      onClose();
-    }, 2200);
+    setIsSubmitting(true);
+    try {
+      const body = new FormData();
+      body.set("fullName", formData.fullName);
+      body.set("phone", formData.phone);
+      body.set("email", formData.email);
+      body.set("experience", formData.experience);
+      body.set("currentCtc", formData.currentCtc);
+      body.set("expectedCtc", formData.expectedCtc);
+      body.set("noticePeriod", formData.noticePeriod);
+      body.set("applyingFor", formData.applyingFor);
+      body.set("relevantLink", formData.relevantLink);
+      body.set("resume", resumeFile);
+      const response = await fetch("/api/careers/applications", {
+        method: "POST",
+        body,
+      });
+      const payload = (await response.json().catch(() => null)) as
+        | { ok?: boolean; error?: string; fieldErrors?: Record<string, string> }
+        | null;
+      if (!response.ok || !payload?.ok) {
+        if (payload?.fieldErrors) {
+          setErrors(payload.fieldErrors);
+        } else {
+          setErrors({ resume: payload?.error || "Something went wrong. Please try again." });
+        }
+        return;
+      }
+      setSubmitted(true);
+      setTimeout(() => {
+        setSubmitted(false);
+        onClose();
+      }, 2200);
+    } catch {
+      setErrors({ resume: "Something went wrong. Please try again." });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (!isOpen || !mounted) return null;
@@ -839,7 +873,7 @@ export default function ApplyModal({ isOpen, onClose, defaultRole = '' }: ApplyM
                 ) : (
                   <>
                     <p className="apply-dropzone-title">Upload your resume</p>
-                    <p className="apply-dropzone-hint">PDF, DOC or DOCX (Max. 10MB)</p>
+                    <p className="apply-dropzone-hint">PDF, DOC or DOCX (Max. 4MB)</p>
                   </>
                 )}
                 <button
@@ -868,9 +902,12 @@ export default function ApplyModal({ isOpen, onClose, defaultRole = '' }: ApplyM
           <div className="apply-modal-footer">
             <button
               type="submit"
+              disabled={isSubmitting || submitted}
               className={`apply-submit-btn${submitted ? ' submitted' : ''}`}
             >
-              {submitted ? (
+              {isSubmitting ? (
+                'Submitting...'
+              ) : submitted ? (
                 <>
                   <svg
                     width="18"

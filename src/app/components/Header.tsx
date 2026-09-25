@@ -25,6 +25,8 @@ const PAGE_TITLES: Record<string, string> = {
   "/product": "Product | Gelora Tech",
   "/about": "About | Gelora Tech",
   "/careers": "Careers | Gelora Tech",
+  "/terms": "Terms & Conditions | Gelora Tech",
+  "/privacy": "Privacy Policy | Gelora Tech",
 };
 
 export default function Header({ activeTab, onTabChange }: HeaderProps) {
