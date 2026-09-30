@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
+import { usePageLoader } from "./PageLoader";
 
 interface HeaderProps {
   activeTab?: string;
@@ -32,6 +33,7 @@ const PAGE_TITLES: Record<string, string> = {
 export default function Header({ activeTab, onTabChange }: HeaderProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const { showLoader } = usePageLoader();
   const [selected, setSelected] = useState(activeTab || "Home");
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -85,69 +87,43 @@ export default function Header({ activeTab, onTabChange }: HeaderProps) {
 
   // Detect if the header is over a white/light background section (including gradients)
   useEffect(() => {
-    const isLightElement = (el: HTMLElement): boolean | null => {
-      // 1. Check known light section classes
-      if (el.closest('.gt-cta-wrapper, .story-section, .opportunities-section, .trusted-strip, .careers-light-section')) {
-        return true;
-      }
-      const style = window.getComputedStyle(el);
-      // 2. Check background-image for light gradients
-      const bgImg = style.backgroundImage;
-      if (bgImg && bgImg !== 'none') {
-        if (/E9E1FF|CDC2EA|EEEAFB|E0D5FF|E5DCFF|F4F0FF|255,\s*255,\s*255|238,\s*234,\s*251|244,\s*240,\s*255/i.test(bgImg)) {
-          return true;
-        }
-      }
-      // 3. Check background-color
-      const bg = style.backgroundColor;
-      if (bg && bg !== 'transparent' && bg !== 'rgba(0, 0, 0, 0)') {
-        const m = bg.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
-        if (m) {
-          const alpha = m[4] !== undefined ? parseFloat(m[4]) : 1;
-          if (alpha > 0.25) {
-            const r = parseInt(m[1]), g = parseInt(m[2]), b = parseInt(m[3]);
-            const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-            return luminance > 0.55;
-          }
-        }
-      }
-      return null;
-    };
+    const LIGHT_SELECTORS = [
+      '.gt-cta-wrapper',
+      '.story-section',
+      '.opportunities-section',
+      '.trusted-strip',
+      '.services-deck-section',
+      '.contact-light-section',
+      '.fsd-shell',
+    ].join(', ');
 
     const detectBg = () => {
       try {
-        const pill = navPillRef.current;
-        let sampleX = window.innerWidth / 2;
-        let sampleY = 32;
-        if (pill) {
-          const rect = pill.getBoundingClientRect();
-          sampleX = rect.left + rect.width / 2;
-          sampleY = rect.top + rect.height / 2;
-        }
-
-        const elements = document.elementsFromPoint(sampleX, sampleY) as HTMLElement[];
-        for (const el of elements) {
-          if (el.closest('header')) continue;
-          let curr: HTMLElement | null = el;
-          while (curr && curr !== document.body && curr !== document.documentElement) {
-            const res = isLightElement(curr);
-            if (res !== null) {
-              setIsLightBg(res);
-              return;
-            }
-            curr = curr.parentElement;
+        const lightEls = document.querySelectorAll(LIGHT_SELECTORS);
+        let foundLight = false;
+        for (let i = 0; i < lightEls.length; i++) {
+          const rect = lightEls[i].getBoundingClientRect();
+          // Header sits at y=0..70. Check if any light section overlaps the header area
+          if (rect.top <= 65 && rect.bottom >= 20) {
+            foundLight = true;
+            break;
           }
         }
-        setIsLightBg(false);
+        setIsLightBg(foundLight);
       } catch {
         setIsLightBg(false);
       }
     };
 
     detectBg();
+    const frameId = requestAnimationFrame(detectBg);
+    const timerId = setTimeout(detectBg, 50);
+
     window.addEventListener('scroll', detectBg, { passive: true });
     window.addEventListener('resize', detectBg, { passive: true });
     return () => {
+      cancelAnimationFrame(frameId);
+      clearTimeout(timerId);
       window.removeEventListener('scroll', detectBg);
       window.removeEventListener('resize', detectBg);
     };
@@ -237,6 +213,9 @@ export default function Header({ activeTab, onTabChange }: HeaderProps) {
 
       if (name === currentTab) return;
 
+      // Show loader immediately while switching tabs to new page
+      showLoader();
+
       targetHrefRef.current = href;
 
       // Clear any previous running timers
@@ -291,26 +270,24 @@ export default function Header({ activeTab, onTabChange }: HeaderProps) {
     [currentTab, onTabChange, repositionPill, router]
   );
 
-  // Navigate to contact page and scroll to the form section
+  // Navigate to contact page starting from the top/start of the page
   const handleLetsTalk = (e: React.MouseEvent) => {
     e.preventDefault();
     setIsMenuOpen(false);
+    document.documentElement.style.overflow = "";
+    document.body.style.overflow = "";
+    document.documentElement.classList.remove('viewport-locked');
+
     if (pathname === "/contact") {
-      // Already on contact page — just scroll to form
-      const el = document.getElementById("contact-form");
-      if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+      // Already on contact page — scroll smoothly to the very top/start
+      window.scrollTo({ top: 0, left: 0, behavior: "smooth" });
     } else {
+      showLoader();
+      window.scrollTo({ top: 0, left: 0, behavior: "instant" });
       router.push("/contact");
-      // After navigation, scroll to form once the element is available
-      const tryScroll = (attempts: number) => {
-        const el = document.getElementById("contact-form");
-        if (el) {
-          el.scrollIntoView({ behavior: "smooth", block: "start" });
-        } else if (attempts > 0) {
-          setTimeout(() => tryScroll(attempts - 1), 120);
-        }
-      };
-      setTimeout(() => tryScroll(8), 300);
+      setTimeout(() => {
+        window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+      }, 40);
     }
   };
 
@@ -371,6 +348,9 @@ export default function Header({ activeTab, onTabChange }: HeaderProps) {
                   key={item.name}
                   href={item.href}
                   onClick={() => {
+                    if (item.href !== pathname) {
+                      showLoader();
+                    }
                     setSelected(item.name);
                     setIsMenuOpen(false);
                     if (onTabChange) onTabChange(item.name);
@@ -605,7 +585,7 @@ export default function Header({ activeTab, onTabChange }: HeaderProps) {
           font-weight: 400;
           font-size: 15px;
           line-height: 1;
-          color: rgba(255,255,255,0.78);
+          color: rgba(255, 255, 255, 0.92);
           text-decoration: none;
           display: inline-flex;
           align-items: center;
@@ -636,16 +616,16 @@ export default function Header({ activeTab, onTabChange }: HeaderProps) {
           opacity: 0;
         }
 
-        /* Light-mode nav item text: clean dark charcoal matching Image 2 */
+        /* Light-mode nav item text: crisp black on white/light backgrounds */
         .hdr-nav-pill.light-mode .hdr-nav-item {
-          color: #222222;
+          color: #111111 !important;
           font-weight: 500;
         }
         .hdr-nav-pill.light-mode .hdr-nav-item:hover {
-          color: #744FE7;
+          color: #744FE7 !important;
         }
         .hdr-nav-pill.light-mode .hdr-nav-item.active {
-          color: #ffffff;
+          color: #ffffff !important;
           font-weight: 600;
         }
 

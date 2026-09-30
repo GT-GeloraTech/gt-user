@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import Footer from "@/app/components/Footer";
+import CountryPhoneInput, { validatePhoneForCountry } from "@/app/components/CountryPhoneInput";
+import type { CountryCode } from "libphonenumber-js";
 
 export default function ContactPage() {
   const [formData, setFormData] = useState({
@@ -13,30 +15,78 @@ export default function ContactPage() {
     message: "",
     agreed: false,
   });
+  const [selectedCountry, setSelectedCountry] = useState<CountryCode>("IN");
+  const [countryDialCode, setCountryDialCode] = useState("+91");
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [contactError, setContactError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
-  // Derived: if either field has a value, the other becomes optional
-  const emailFilled = formData.email.trim().length > 0;
-  const phoneFilled = formData.phone.trim().length > 0;
-  const emailPlaceholder = phoneFilled ? "Email Address (optional)" : "Email Address";
-  const phonePlaceholder = emailFilled ? "Phone Number (optional)" : "Phone Number";
+  // Name fields: only allow letters, spaces, hyphens and apostrophes
+  const handleNameChange = (field: "firstName" | "lastName", value: string) => {
+    const cleaned = value.replace(/[^a-zA-Z\s'-]/g, "");
+    setFormData((prev) => ({ ...prev, [field]: cleaned }));
+    if (fieldErrors[field]) {
+      setFieldErrors((prev) => { const n = { ...prev }; delete n[field]; return n; });
+    }
+  };
+
+  // Phone field: only allow 10 numeric digits
+  const handlePhoneChange = (value: string) => {
+    const cleaned = value.replace(/\D/g, "").slice(0, 10);
+    setFormData((prev) => ({ ...prev, phone: cleaned }));
+    if (fieldErrors.phone) {
+      setFieldErrors((prev) => { const n = { ...prev }; delete n.phone; return n; });
+    }
+  };
+
+  const handleEmailChange = (value: string) => {
+    setFormData((prev) => ({ ...prev, email: value }));
+    if (fieldErrors.email) {
+      setFieldErrors((prev) => { const n = { ...prev }; delete n.email; return n; });
+    }
+  };
+
+  const handleMessageChange = (value: string) => {
+    setFormData((prev) => ({ ...prev, message: value }));
+    if (fieldErrors.message) {
+      setFieldErrors((prev) => { const n = { ...prev }; delete n.message; return n; });
+    }
+  };
+
+  const validateForm = () => {
+    const errs: Record<string, string> = {};
+    if (!formData.firstName.trim()) errs.firstName = "First Name is required.";
+    if (!formData.lastName.trim()) errs.lastName = "Last Name is required.";
+    if (!formData.email.trim()) {
+      errs.email = "Email Address is required.";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
+      errs.email = "Enter a valid email address.";
+    }
+    const phoneError = validatePhoneForCountry(formData.phone, selectedCountry);
+    if (phoneError) {
+      errs.phone = phoneError;
+    }
+    if (!formData.message.trim()) errs.message = "Please tell us about your project.";
+    setFieldErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.agreed) return;
-    if (!emailFilled && !phoneFilled) {
-      setContactError("Please enter at least your Email Address or Phone Number.");
-      return;
-    }
+    if (!validateForm()) return;
     setContactError("");
     setIsSubmitting(true);
     try {
       const response = await fetch("/api/contact", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          service: formData.service || "Other",
+          phone: formData.phone.trim() ? `${countryDialCode} ${formData.phone.trim()}` : "",
+        }),
       });
       const payload = (await response.json().catch(() => null)) as
         | { ok?: boolean; error?: string }
@@ -339,7 +389,7 @@ export default function ContactPage() {
           width: 100%;
           box-sizing: border-box;
           background: rgba(140, 132, 166, 0.21);
-          border: none;
+          border: 1.5px solid transparent;
           border-radius: 6px;
           height: 52px;
           padding: 0 18px;
@@ -348,14 +398,60 @@ export default function ContactPage() {
           font-weight: 400;
           color: #111111;
           outline: none;
-          transition: background 0.2s ease, box-shadow 0.2s ease;
+          transition: background 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
         }
         .contact-field::placeholder {
           color: rgba(17, 16, 21, 0.45);
         }
         .contact-field:focus {
-          background: rgba(140, 132, 166, 0.32);
-          box-shadow: 0 0 0 2px rgba(153, 120, 255, 0.4);
+          border-color: #8B63FF;
+          box-shadow: 0 0 0 3px rgba(139, 99, 255, 0.14);
+        }
+        .contact-field:-webkit-autofill,
+        .contact-field:-webkit-autofill:hover,
+        .contact-field:-webkit-autofill:focus {
+          -webkit-box-shadow: 0 0 0 1000px rgba(140, 132, 166, 0.21) inset !important;
+          -webkit-text-fill-color: #111111 !important;
+          border-color: #8B63FF !important;
+          transition: background-color 9999s ease-in-out 0s;
+        }
+        .contact-field.field-error {
+          border-color: #E53935 !important;
+          background: rgba(229, 57, 53, 0.04);
+        }
+        .contact-field-group {
+          position: relative;
+          display: flex;
+          flex-direction: column;
+          width: 100%;
+        }
+        .contact-placeholder-overlay {
+          position: absolute;
+          top: 17px;
+          left: 18px;
+          pointer-events: none;
+          font-family: 'Inter', sans-serif;
+          font-size: 14px;
+          font-weight: 400;
+          color: rgba(17, 16, 21, 0.45);
+          display: inline-flex;
+          align-items: center;
+          user-select: none;
+          line-height: 1;
+        }
+        .contact-field-required {
+          color: #E53935;
+          margin-left: 3px;
+          font-weight: 700;
+          font-size: 14px;
+        }
+        .contact-field-error-text {
+          font-family: 'Inter', sans-serif;
+          font-size: 11.5px;
+          color: #E53935;
+          margin-top: 4px;
+          font-weight: 500;
+          line-height: 1.3;
         }
 
         /* Reduced textarea height to 150px per user request */
@@ -363,7 +459,7 @@ export default function ContactPage() {
           width: 100%;
           box-sizing: border-box;
           background: rgba(140, 132, 166, 0.21);
-          border: none;
+          border: 1.5px solid transparent;
           border-radius: 6px;
           height: 150px;
           padding: 16px 18px;
@@ -374,15 +470,50 @@ export default function ContactPage() {
           outline: none;
           resize: vertical;
           min-height: 120px;
-          transition: background 0.2s ease, box-shadow 0.2s ease;
+          transition: background 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
         }
         .contact-textarea::placeholder {
           color: rgba(17, 16, 21, 0.45);
         }
         .contact-textarea:focus {
-          background: rgba(140, 132, 166, 0.32);
-          box-shadow: 0 0 0 2px rgba(153, 120, 255, 0.4);
+          border-color: #8B63FF;
+          box-shadow: 0 0 0 3px rgba(139, 99, 255, 0.14);
         }
+        .contact-textarea.field-error {
+          border-color: #E53935 !important;
+          background: rgba(229, 57, 53, 0.04);
+        }
+
+        /* Service select */
+        .contact-select {
+          width: 100%;
+          box-sizing: border-box;
+          background: rgba(140, 132, 166, 0.21);
+          border: 1.5px solid transparent;
+          border-radius: 6px;
+          height: 52px;
+          padding: 0 40px 0 18px;
+          font-family: 'Inter', sans-serif;
+          font-size: 14px;
+          font-weight: 400;
+          color: #111111;
+          outline: none;
+          appearance: none;
+          -webkit-appearance: none;
+          cursor: pointer;
+          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%238B63FF' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+          background-repeat: no-repeat;
+          background-position: right 14px center;
+          transition: background-color 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+        }
+        .contact-select:focus {
+          border-color: #8B63FF;
+          box-shadow: 0 0 0 3px rgba(139, 99, 255, 0.14);
+        }
+        .contact-select.select-placeholder {
+          color: rgba(17, 16, 21, 0.45);
+        }
+
 
         /* Checkbox row */
         .contact-checkbox-row {
@@ -448,28 +579,127 @@ export default function ContactPage() {
           transform: none;
         }
 
+        /* ── Flip Card ── */
+        .contact-flip-scene {
+          perspective: 1200px;
+          width: 100%;
+        }
+        .contact-flip-card {
+          position: relative;
+          width: 100%;
+          transform-style: preserve-3d;
+          transition: transform 0.72s cubic-bezier(0.45, 0.05, 0.55, 0.95);
+        }
+        .contact-flip-card.is-flipped {
+          transform: rotateY(180deg);
+        }
+        .contact-flip-front,
+        .contact-flip-back {
+          width: 100%;
+          backface-visibility: hidden;
+          -webkit-backface-visibility: hidden;
+        }
+        .contact-flip-front {
+          /* front face — the form */
+        }
+        .contact-flip-back {
+          position: absolute;
+          top: 0;
+          left: 0;
+          height: 100%;
+          transform: rotateY(180deg);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
         /* Success box */
         .contact-success-box {
-          padding: 28px 24px;
-          border-radius: 10px;
-          background: rgba(16, 185, 129, 0.1);
-          border: 1px solid rgba(16, 185, 129, 0.3);
+          position: relative;
+          width: 100%;
+          height: 100%;
+          border-radius: 16px;
+          background: #F4F0FF;
+          border: 1.5px solid rgba(139, 99, 255, 0.22);
+          box-shadow: 0 8px 40px rgba(139, 99, 255, 0.12);
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
           text-align: center;
+          padding: 48px 40px;
+          box-sizing: border-box;
+          gap: 18px;
+        }
+        .contact-success-close {
+          position: absolute;
+          top: 16px;
+          right: 16px;
+          width: 34px;
+          height: 34px;
+          border-radius: 50%;
+          background: rgba(139, 99, 255, 0.10);
+          border: 1px solid rgba(139, 99, 255, 0.20);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          color: #8B63FF;
+          transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+          flex-shrink: 0;
+        }
+        .contact-success-close:hover {
+          background: rgba(139, 99, 255, 0.18);
+          transform: scale(1.08);
+          box-shadow: 0 0 0 4px rgba(139, 99, 255, 0.10);
+        }
+        .contact-success-icon-ring {
+          width: 76px;
+          height: 76px;
+          border-radius: 50%;
+          background: linear-gradient(135deg, #8B63FF 0%, #6234E2 100%);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+          box-shadow: 0 0 0 14px rgba(139, 99, 255, 0.12);
+          animation: successPulse 2.2s ease-in-out infinite;
+        }
+        @keyframes successPulse {
+          0%, 100% { box-shadow: 0 0 0 14px rgba(139, 99, 255, 0.12); }
+          50%       { box-shadow: 0 0 0 22px rgba(139, 99, 255, 0.05); }
         }
         .contact-success-title {
           font-family: 'Inter', sans-serif;
-          font-size: 18px;
+          font-size: clamp(20px, 2vw, 26px);
           font-weight: 700;
-          color: #0F9B6E;
-          margin: 0 0 8px 0;
+          color: #111111;
+          margin: 0;
+          line-height: 1.2;
         }
         .contact-success-desc {
           font-family: 'Inter', sans-serif;
-          font-size: 14px;
+          font-size: 15px;
           font-weight: 400;
-          color: rgba(17, 16, 21, 0.75);
-          line-height: 1.6;
+          color: rgba(17, 16, 21, 0.60);
+          line-height: 1.65;
           margin: 0;
+          max-width: 360px;
+        }
+        .contact-success-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 7px;
+          background: rgba(139, 99, 255, 0.10);
+          border: 1px solid rgba(139, 99, 255, 0.28);
+          border-radius: 100px;
+          padding: 7px 20px;
+          font-family: 'Inter', sans-serif;
+          font-size: 12.5px;
+          font-weight: 500;
+          color: #6234E2;
+          letter-spacing: 0.03em;
+          margin-top: 4px;
         }
 
         /* ──────────────────────────────────────────
@@ -623,126 +853,228 @@ export default function ContactPage() {
               </p>
             </div>
 
-            {/* RIGHT COLUMN — FORM */}
+            {/* RIGHT COLUMN — FORM with flip animation */}
             <div className="contact-form-col">
-              {isSubmitted ? (
-                <div className="contact-success-box">
-                  <h4 className="contact-success-title">Thank you for reaching out!</h4>
-                  <p className="contact-success-desc">
-                    We&apos;ve received your message and will be in touch.
-                  </p>
-                </div>
-              ) : (
-                <form className="contact-form" onSubmit={handleSubmit} noValidate>
-                  {/* First Name + Last Name */}
-                  <div className="contact-form-row">
-                    <input
-                      id="contact-first-name"
-                      type="text"
-                      required
-                      placeholder="First Name"
-                      className="contact-field"
-                      value={formData.firstName}
-                      onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                    />
-                    <input
-                      id="contact-last-name"
-                      type="text"
-                      required
-                      placeholder="Last Name"
-                      className="contact-field"
-                      value={formData.lastName}
-                      onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                    />
+              <div className="contact-flip-scene">
+                <div className={`contact-flip-card${isSubmitted ? " is-flipped" : ""}`}>
+
+                  {/* FRONT — Form */}
+                  <div className="contact-flip-front">
+                    <form className="contact-form" onSubmit={handleSubmit} noValidate>
+                      {/* First Name + Last Name */}
+                      <div className="contact-form-row">
+                        <div className="contact-field-group">
+                          <input
+                            id="contact-first-name"
+                            type="text"
+                            className={`contact-field${fieldErrors.firstName ? " field-error" : ""}`}
+                            value={formData.firstName}
+                            onChange={(e) => handleNameChange("firstName", e.target.value)}
+                            autoComplete="given-name"
+                          />
+                          {!formData.firstName && (
+                            <span className="contact-placeholder-overlay">
+                              First Name <span className="contact-field-required">*</span>
+                            </span>
+                          )}
+                          {fieldErrors.firstName && (
+                            <span className="contact-field-error-text">{fieldErrors.firstName}</span>
+                          )}
+                        </div>
+
+                        <div className="contact-field-group">
+                          <input
+                            id="contact-last-name"
+                            type="text"
+                            className={`contact-field${fieldErrors.lastName ? " field-error" : ""}`}
+                            value={formData.lastName}
+                            onChange={(e) => handleNameChange("lastName", e.target.value)}
+                            autoComplete="family-name"
+                          />
+                          {!formData.lastName && (
+                            <span className="contact-placeholder-overlay">
+                              Last Name <span className="contact-field-required">*</span>
+                            </span>
+                          )}
+                          {fieldErrors.lastName && (
+                            <span className="contact-field-error-text">{fieldErrors.lastName}</span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Email Address */}
+                      <div className="contact-field-group">
+                        <input
+                          id="contact-email"
+                          type="email"
+                          className={`contact-field${fieldErrors.email ? " field-error" : ""}`}
+                          value={formData.email}
+                          onChange={(e) => handleEmailChange(e.target.value)}
+                          autoComplete="email"
+                        />
+                        {!formData.email && (
+                          <span className="contact-placeholder-overlay">
+                            Email Address <span className="contact-field-required">*</span>
+                          </span>
+                        )}
+                        {fieldErrors.email && (
+                          <span className="contact-field-error-text">{fieldErrors.email}</span>
+                        )}
+                      </div>
+
+                      {/* Phone + Service */}
+                      <div className="contact-form-row">
+                        <div className="contact-field-group">
+                          <CountryPhoneInput
+                            id="contact-phone"
+                            value={formData.phone}
+                            onChange={(nationalNumber, _full, country) => {
+                              setFormData((prev) => ({ ...prev, phone: nationalNumber }));
+                              setSelectedCountry(country.code);
+                              setCountryDialCode(country.dialCode);
+                              if (fieldErrors.phone) {
+                                setFieldErrors((prev) => {
+                                  const n = { ...prev };
+                                  delete n.phone;
+                                  return n;
+                                });
+                              }
+                            }}
+                            selectedCountry={selectedCountry}
+                            onCountryChange={(country) => {
+                              setSelectedCountry(country.code);
+                              setCountryDialCode(country.dialCode);
+                            }}
+                            error={fieldErrors.phone}
+                            variant="contact"
+                            placeholderNode={
+                              <>
+                                Phone Number <span className="contact-field-required">*</span>
+                              </>
+                            }
+                          />
+                        </div>
+
+                        <div className="contact-field-group">
+                          <select
+                            id="contact-service"
+                            className={`contact-select${!formData.service ? " select-placeholder" : ""}`}
+                            value={formData.service}
+                            onChange={(e) => setFormData((prev) => ({ ...prev, service: e.target.value }))}
+                          >
+                            <option value="" disabled hidden>Select a Service</option>
+                            <option value="Web Development" style={{color:'black'}}>Web Development</option>
+                            <option value="Mobile Applications"  style={{color:'black'}}>Mobile Applications</option>
+                            <option value="Cloud Solutions"  style={{color:'black'}}>Cloud Solutions</option>
+                            <option value="AI Automation"  style={{color:'black'}}>AI Automation</option>
+                            <option value="Cybersecurity"  style={{color:'black'}}>Cybersecurity</option>
+                            <option value="Other"  style={{color:'black'}}>Other</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      {/* Project Description */}
+                      <div className="contact-field-group">
+                        <textarea
+                          id="contact-msg"
+                          className={`contact-textarea${fieldErrors.message ? " field-error" : ""}`}
+                          value={formData.message}
+                          onChange={(e) => handleMessageChange(e.target.value)}
+                        />
+                        {!formData.message && (
+                          <span className="contact-placeholder-overlay" style={{ top: "16px" }}>
+                            Tell Us About Your Project <span className="contact-field-required">*</span>
+                          </span>
+                        )}
+                        {fieldErrors.message && (
+                          <span className="contact-field-error-text">{fieldErrors.message}</span>
+                        )}
+                      </div>
+
+                      {/* Server error banner */}
+                      {contactError && (
+                        <p style={{ color: "#E53935", fontSize: "13px", margin: "2px 0 0 0" }}>
+                          {contactError}
+                        </p>
+                      )}
+
+                      {/* Checkbox */}
+                      <div className="contact-checkbox-row">
+                        <input
+                          id="contact-agree"
+                          type="checkbox"
+                          className="contact-checkbox"
+                          checked={formData.agreed}
+                          onChange={(e) => setFormData({ ...formData, agreed: e.target.checked })}
+                        />
+                        <label htmlFor="contact-agree" className="contact-checkbox-label">
+                          I agree to be contacted by Gelora Tech regarding my enquiry and accept the{" "}
+                          <a href="/privacy">Privacy Policy</a> and{" "}
+                          <a href="/terms">Terms &amp; Conditions</a>.
+                        </label>
+                      </div>
+
+                      {/* Submit button */}
+                      <button
+                        type="submit"
+                        disabled={isSubmitting || !formData.agreed}
+                        className="contact-submit-btn"
+                      >
+                        {isSubmitting ? "Sending..." : (
+                          <>
+                            <span>Send Message</span>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                              <line x1="5" y1="12" x2="19" y2="12" />
+                              <polyline points="12 5 19 12 12 19" />
+                            </svg>
+                          </>
+                        )}
+                      </button>
+                    </form>
                   </div>
 
-                  {/* Email Address — optional if phone filled */}
-                  <input
-                    id="contact-email"
-                    type="email"
-                    placeholder={emailPlaceholder}
-                    className="contact-field"
-                    value={formData.email}
-                    onChange={(e) => {
-                      setFormData({ ...formData, email: e.target.value });
-                      setContactError("");
-                    }}
-                  />
+                  {/* BACK — Success message */}
+                  <div className="contact-flip-back">
+                    <div className="contact-success-box">
 
-                  {/* Phone + Service — phone optional if email filled */}
-                  <div className="contact-form-row">
-                    <input
-                      id="contact-phone"
-                      type="tel"
-                      placeholder={phonePlaceholder}
-                      className="contact-field"
-                      value={formData.phone}
-                      onChange={(e) => {
-                        setFormData({ ...formData, phone: e.target.value });
-                        setContactError("");
-                      }}
-                    />
-                    <input
-                      id="contact-service"
-                      type="text"
-                      placeholder="Service Interested In"
-                      className="contact-field"
-                      value={formData.service}
-                      onChange={(e) => setFormData({ ...formData, service: e.target.value })}
-                    />
-                  </div>
-
-                  {/* Inline error when neither email nor phone provided */}
-                  {contactError && (
-                    <p style={{ color: "#E55", fontSize: "13px", marginTop: "-4px", marginBottom: "2px" }}>
-                      {contactError}
-                    </p>
-                  )}
-
-                  {/* Project Description */}
-                  <textarea
-                    id="contact-msg"
-                    required
-                    placeholder="Tell Us About Your Project"
-                    className="contact-textarea"
-                    value={formData.message}
-                    onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                  />
-
-                  {/* Checkbox */}
-                  <div className="contact-checkbox-row">
-                    <input
-                      id="contact-agree"
-                      type="checkbox"
-                      className="contact-checkbox"
-                      checked={formData.agreed}
-                      onChange={(e) => setFormData({ ...formData, agreed: e.target.checked })}
-                    />
-                    <label htmlFor="contact-agree" className="contact-checkbox-label">
-                      I agree to be contacted by Gelora Tech regarding my enquiry and accept the{" "}
-                      <a href="/privacy">Privacy Policy</a> and{" "}
-                      <a href="/terms">Terms &amp; Conditions</a>.
-                    </label>
-                  </div>
-
-                  {/* Submit button: reduced height to 52px and font size to 15px */}
-                  <button
-                    type="submit"
-                    disabled={isSubmitting || !formData.agreed}
-                    className="contact-submit-btn"
-                  >
-                    {isSubmitting ? "Sending..." : (
-                      <>
-                        <span>Send Message</span>
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                          <line x1="5" y1="12" x2="19" y2="12" />
-                          <polyline points="12 5 19 12 12 19" />
+                      {/* Close button */}
+                      <button
+                        type="button"
+                        className="contact-success-close"
+                        aria-label="Close success message"
+                        onClick={() => {
+                          setIsSubmitted(false);
+                          setFormData({ firstName: "", lastName: "", email: "", phone: "", service: "", message: "", agreed: false });
+                          setFieldErrors({});
+                          setContactError("");
+                          setSelectedCountry("IN");
+                          setCountryDialCode("+91");
+                        }}
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <line x1="18" y1="6" x2="6" y2="18" />
+                          <line x1="6" y1="6" x2="18" y2="18" />
                         </svg>
-                      </>
-                    )}
-                  </button>
-                </form>
-              )}
+                      </button>
+
+                      {/* Checkmark icon */}
+                      <div className="contact-success-icon-ring" aria-hidden="true">
+                        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                      </div>
+
+                      <h4 className="contact-success-title">Thank you for reaching out!</h4>
+
+                      <p className="contact-success-desc">
+                        We&apos;ve received your message and our team will reach out to you shortly.
+                      </p>
+
+                    </div>
+                  </div>
+
+                </div>
+              </div>
             </div>
           </div>
         </div>

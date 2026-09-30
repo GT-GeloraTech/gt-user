@@ -61,7 +61,7 @@ export async function insertJobApplication(input: ApplicationInput): Promise<str
     ) VALUES (
       ${id}::uuid,
       ${input.fullName},
-      '+91',
+      ${input.countryCode || '+91'},
       ${input.phoneNumber},
       ${input.email},
       ${input.experience},

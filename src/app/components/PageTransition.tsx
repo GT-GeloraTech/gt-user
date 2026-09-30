@@ -1,30 +1,28 @@
 "use client";
 
-import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
+import { usePageLoader } from "./PageLoader";
 
-const ENTER_DURATION = 560;
-const EXIT_DURATION  = 260;
+const ENTER_DURATION = 420;
 
 export default function PageTransition({ children }: { children: React.ReactNode }) {
-  const pathname   = usePathname();
-  const prevPath   = useRef(pathname);
+  const { isLoading } = usePageLoader();
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    setVisible(false);
-
-    const id = setTimeout(() => setVisible(true), 20);
-    prevPath.current = pathname;
-    return () => clearTimeout(id);
-  }, [pathname]);
+    if (isLoading) {
+      setVisible(false);
+    } else {
+      setVisible(true);
+    }
+  }, [isLoading]);
 
   return (
     <>
       <style>{`
         .gt-page-wrapper {
           opacity: 0;
-          transform: translateY(28px);
+          transform: translateY(16px);
           transition:
             opacity   ${ENTER_DURATION}ms cubic-bezier(0.16, 1, 0.3, 1),
             transform ${ENTER_DURATION}ms cubic-bezier(0.16, 1, 0.3, 1);
@@ -46,3 +44,4 @@ export default function PageTransition({ children }: { children: React.ReactNode
     </>
   );
 }
+
