@@ -13,6 +13,7 @@ type ResumeExt = keyof typeof RESUME_TYPES;
 
 export type ApplicationInput = {
   fullName: string;
+  countryCode: string;
   phoneNumber: string;
   email: string;
   experience: string;
@@ -63,6 +64,7 @@ export async function validateApplication(form: FormData): Promise<{
   const fieldErrors: FieldErrors = {};
 
   const fullName = text(form, "fullName");
+  const countryCode = text(form, "countryCode") || "+91";
   const phoneNumber = text(form, "phone").replace(/[\s-]/g, "");
   const email = text(form, "email");
   const experience = text(form, "experience");
@@ -137,6 +139,7 @@ export async function validateApplication(form: FormData): Promise<{
   return {
     data: {
       fullName,
+      countryCode,
       phoneNumber,
       email,
       experience,

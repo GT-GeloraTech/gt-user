@@ -158,7 +158,7 @@ export default function CareersPage() {
           position: relative;
           width: 100%;
           min-height: 100vh;
-          overflow-x: hidden;
+          overflow-x: clip;
           background-color: #0b0916;
           background-image: 
             radial-gradient(ellipse 65% 50% at 50% 280px, rgba(116, 79, 231, 0.24) 0%, rgba(68, 40, 150, 0.12) 45%, transparent 75%),
@@ -572,14 +572,19 @@ export default function CareersPage() {
         }
 
         .opportunities-empty {
-          margin: 12px 0 28px;
-          padding: 20px 18px 8px;
+          width: 100%;
+          align-self: center;
+          margin: 32px auto 40px;
+          padding: 24px 18px;
           font-family: 'Inter', sans-serif;
           font-weight: 500;
-          font-size: clamp(18px, 1.6vw, 20px);
+          font-size: clamp(18px, 1.6vw, 22px);
           line-height: 1.5;
           color: #3A3555;
           text-align: center;
+          display: flex;
+          align-items: center;
+          justify-content: center;
         }
 
         .opportunities-tabs-row {
@@ -942,6 +947,18 @@ export default function CareersPage() {
           width: 100% !important;
           max-width: 100% !important;
           align-self: stretch !important;
+        }
+
+        /* Line 66 — Horizontal divider above Footer */
+        .careers-line-66 {
+          position: relative;
+          width: 100%;
+          height: 0px;
+          border: none;
+          border-top: 2px solid rgba(255, 255, 255, 0.3);
+          margin: 0;
+          box-sizing: border-box;
+          z-index: 2;
         }
 
         /* ─── Keyframe Animations ─── */
@@ -1497,6 +1514,9 @@ export default function CareersPage() {
           </div>
         </div>
       </section>
+
+      {/* Line 66 */}
+      <div className="careers-line-66" aria-hidden="true" />
 
       {/* Apply Modal */}
       <ApplyModal

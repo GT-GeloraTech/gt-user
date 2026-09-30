@@ -239,12 +239,23 @@ export default function HomePage() {
       wheelCooldown.current = false;
     }, 800);
 
+    const el = sectionRef.current;
+    const align = () => {
+      if (el) {
+        el.scrollIntoView({ behavior: "instant", block: "start" });
+      } else if (typeof targetTop === "number") {
+        window.scrollTo({ top: targetTop, behavior: "instant" });
+      }
+    };
+
+    align();
+
     document.documentElement.style.overflow = "hidden";
     document.body.style.overflow = "hidden";
     document.documentElement.classList.add('viewport-locked');
-    if (typeof targetTop === "number") {
-      window.scrollTo({ top: targetTop, behavior: "instant" });
-    }
+
+    requestAnimationFrame(align);
+    setTimeout(align, 20);
   }, []);
 
   /**
@@ -263,14 +274,16 @@ export default function HomePage() {
     document.body.style.overflow = "";
     document.documentElement.classList.remove('viewport-locked');
 
-    const offsetTop = sectionRef.current ? sectionRef.current.offsetTop : window.scrollY;
+    const targetTop = sectionRef.current
+      ? (sectionRef.current.getBoundingClientRect().top + window.scrollY)
+      : window.scrollY;
 
     if (direction === "down") {
       // Smoothly scroll down past the section into content below
-      window.scrollTo({ top: offsetTop + window.innerHeight * 0.45, behavior: "smooth" });
+      window.scrollTo({ top: targetTop + window.innerHeight * 0.45, behavior: "smooth" });
     } else {
       // Smoothly scroll up above the section into About section
-      window.scrollTo({ top: Math.max(0, offsetTop - window.innerHeight * 0.45), behavior: "smooth" });
+      window.scrollTo({ top: Math.max(0, targetTop - window.innerHeight * 0.45), behavior: "smooth" });
     }
 
     // Cooldown prevents immediately re-locking while smooth scroll moves the viewport
@@ -301,60 +314,96 @@ export default function HomePage() {
     /** Detects when the user scrolls into the process section from top or bottom (Desktop only) */
     const onScroll = () => {
       if (typeof window !== "undefined" && window.innerWidth <= 1024) return;
-      if (isLockedRef.current || isUnlockingRef.current) return;
+      if (isLockedRef.current) return;
+      if (isUnlockingRef.current) {
+        prevScrollY.current = window.scrollY;
+        return;
+      }
       if (!sectionRef.current) return;
 
       const curY = window.scrollY;
       const scrollingDown = curY >= prevScrollY.current;
-      prevScrollY.current = curY;
-
       const rect = sectionRef.current.getBoundingClientRect();
-      const offsetTop = sectionRef.current.offsetTop;
+      const sectionTop = rect.top + curY;
 
       if (scrollingDown) {
         // Scrolling DOWN into section from above: lock at Step 1 (0)
-        if (rect.top <= 25 && rect.top >= -80) {
-          lockProcess(0, offsetTop);
+        // Handles slow scroll, fast scroll, and sudden jump past section to footer
+        if (prevScrollY.current <= sectionTop + 30 && (curY >= sectionTop - 50 || rect.top <= 50)) {
+          lockProcess(0, sectionTop);
+          return;
         }
       } else {
         // Scrolling UP into section from below: lock at Step 4 (last step)
-        if (rect.bottom >= window.innerHeight - 25 && rect.bottom <= window.innerHeight + 80) {
-          lockProcess(totalSteps - 1, offsetTop);
+        if (prevScrollY.current >= sectionTop - 30 && (curY <= sectionTop + 50 || rect.bottom >= window.innerHeight - 50)) {
+          lockProcess(totalSteps - 1, sectionTop);
+          return;
         }
       }
+
+      prevScrollY.current = curY;
     };
 
-    /** Intercepts wheel events while locked to cycle through steps in place (Desktop only) */
+    /** Intercepts wheel events while locked to cycle through steps in place,
+     *  or intercepts incoming fast wheel rolls before they overshoot into footer / hero (Desktop only) */
     const onWheel = (e: WheelEvent) => {
       if (typeof window !== "undefined" && window.innerWidth <= 1024) return;
-      if (!isLockedRef.current) return;
-      e.preventDefault(); // Lock page scroll
 
-      if (Math.abs(e.deltaY) < 15) return;
-      if (wheelCooldown.current) return;
-      wheelCooldown.current = true;
-      setTimeout(() => {
-        wheelCooldown.current = false;
-      }, 950);
+      // Handle locked step cycling
+      if (isLockedRef.current) {
+        e.preventDefault(); // Lock page scroll
 
-      const goingDown = e.deltaY > 0;
-      const cur = activeStepRef.current;
+        if (Math.abs(e.deltaY) < 15) return;
+        if (wheelCooldown.current) return;
+        wheelCooldown.current = true;
+        setTimeout(() => {
+          wheelCooldown.current = false;
+        }, 950);
 
-      if (goingDown) {
-        if (cur < totalSteps - 1) {
-          goToStep(cur + 1);
+        const goingDown = e.deltaY > 0;
+        const cur = activeStepRef.current;
+
+        if (goingDown) {
+          if (cur < totalSteps - 1) {
+            goToStep(cur + 1);
+          } else {
+            // All steps completed going down → unlock downward to reveal below content
+            unlockProcess("down");
+          }
         } else {
-          // All steps completed going down → unlock downward to reveal below content
-          unlockProcess("down");
+          // Scrolling UP
+          if (cur > 0) {
+            // Reduce step: 4 -> 3 -> 2 -> 1
+            goToStep(cur - 1);
+          } else {
+            // At Step 1 and scrolling UP → unlock upward to reveal top content
+            unlockProcess("up");
+          }
         }
-      } else {
-        // Scrolling UP
-        if (cur > 0) {
-          // Reduce step: 4 -> 3 -> 2 -> 1
-          goToStep(cur - 1);
-        } else {
-          // At Step 1 and scrolling UP → unlock upward to reveal top content
-          unlockProcess("up");
+        return;
+      }
+
+      // If not locked: intercept fast/slow wheel rolls before browser scrolls past the section
+      if (isUnlockingRef.current || !sectionRef.current) return;
+
+      const rect = sectionRef.current.getBoundingClientRect();
+      const sectionTop = rect.top + window.scrollY;
+      const curY = window.scrollY;
+
+      // Scrolling DOWN towards section from above
+      if (e.deltaY > 0 && curY < sectionTop - 10) {
+        if (curY + e.deltaY >= sectionTop - 50 || rect.top <= e.deltaY + 50) {
+          e.preventDefault();
+          lockProcess(0, sectionTop);
+          return;
+        }
+      }
+      // Scrolling UP towards section from below (footer)
+      else if (e.deltaY < 0 && curY > sectionTop + 10) {
+        if (curY + e.deltaY <= sectionTop + 50 || rect.bottom >= window.innerHeight - Math.abs(e.deltaY) - 50) {
+          e.preventDefault();
+          lockProcess(totalSteps - 1, sectionTop);
+          return;
         }
       }
     };
@@ -362,14 +411,27 @@ export default function HomePage() {
     /** Keyboard navigation while locked */
     const onKeyDown = (e: KeyboardEvent) => {
       if (typeof window !== "undefined" && window.innerWidth <= 1024) return;
+
+      // Escape key emergency unlock
+      if (e.key === "Escape" && isLockedRef.current) {
+        e.preventDefault();
+        unlockProcess("down");
+        return;
+      }
+
       if (!isLockedRef.current) return;
+      if (wheelCooldown.current) return;
       const cur = activeStepRef.current;
       if (e.key === "ArrowDown" || e.key === "PageDown") {
         e.preventDefault();
+        wheelCooldown.current = true;
+        setTimeout(() => { wheelCooldown.current = false; }, 800);
         if (cur < totalSteps - 1) goToStep(cur + 1);
         else unlockProcess("down");
       } else if (e.key === "ArrowUp" || e.key === "PageUp") {
         e.preventDefault();
+        wheelCooldown.current = true;
+        setTimeout(() => { wheelCooldown.current = false; }, 800);
         if (cur > 0) goToStep(cur - 1);
         else unlockProcess("up");
       }
@@ -1001,8 +1063,7 @@ export default function HomePage() {
           position: relative;
           width: 100%;
           height: 100vh;
-          min-height: 680px;
-          max-height: 1024px;
+          min-height: 100vh;
           overflow: hidden;
           background: linear-gradient(117.25deg, #0B0916 15.2%, rgba(25, 13, 70, 0.8) 52.43%, #0A0815 77.43%);
           backdrop-filter: blur(27.7px);

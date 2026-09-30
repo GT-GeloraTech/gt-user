@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import Footer from "@/app/components/Footer";
+import CountryPhoneInput, { validatePhoneForCountry } from "@/app/components/CountryPhoneInput";
+import type { CountryCode } from "libphonenumber-js";
 
 export default function ContactPage() {
   const [formData, setFormData] = useState({
@@ -13,30 +15,77 @@ export default function ContactPage() {
     message: "",
     agreed: false,
   });
+  const [selectedCountry, setSelectedCountry] = useState<CountryCode>("IN");
+  const [countryDialCode, setCountryDialCode] = useState("+91");
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [contactError, setContactError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
-  // Derived: if either field has a value, the other becomes optional
-  const emailFilled = formData.email.trim().length > 0;
-  const phoneFilled = formData.phone.trim().length > 0;
-  const emailPlaceholder = phoneFilled ? "Email Address (optional)" : "Email Address";
-  const phonePlaceholder = emailFilled ? "Phone Number (optional)" : "Phone Number";
+  // Name fields: only allow letters, spaces, hyphens and apostrophes
+  const handleNameChange = (field: "firstName" | "lastName", value: string) => {
+    const cleaned = value.replace(/[^a-zA-Z\s'-]/g, "");
+    setFormData((prev) => ({ ...prev, [field]: cleaned }));
+    if (fieldErrors[field]) {
+      setFieldErrors((prev) => { const n = { ...prev }; delete n[field]; return n; });
+    }
+  };
+
+  // Phone field: only allow 10 numeric digits
+  const handlePhoneChange = (value: string) => {
+    const cleaned = value.replace(/\D/g, "").slice(0, 10);
+    setFormData((prev) => ({ ...prev, phone: cleaned }));
+    if (fieldErrors.phone) {
+      setFieldErrors((prev) => { const n = { ...prev }; delete n.phone; return n; });
+    }
+  };
+
+  const handleEmailChange = (value: string) => {
+    setFormData((prev) => ({ ...prev, email: value }));
+    if (fieldErrors.email) {
+      setFieldErrors((prev) => { const n = { ...prev }; delete n.email; return n; });
+    }
+  };
+
+  const handleMessageChange = (value: string) => {
+    setFormData((prev) => ({ ...prev, message: value }));
+    if (fieldErrors.message) {
+      setFieldErrors((prev) => { const n = { ...prev }; delete n.message; return n; });
+    }
+  };
+
+  const validateForm = () => {
+    const errs: Record<string, string> = {};
+    if (!formData.firstName.trim()) errs.firstName = "First Name is required.";
+    if (!formData.lastName.trim()) errs.lastName = "Last Name is required.";
+    if (!formData.email.trim()) {
+      errs.email = "Email Address is required.";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
+      errs.email = "Enter a valid email address.";
+    }
+    const phoneError = validatePhoneForCountry(formData.phone, selectedCountry);
+    if (phoneError) {
+      errs.phone = phoneError;
+    }
+    if (!formData.message.trim()) errs.message = "Please tell us about your project.";
+    setFieldErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.agreed) return;
-    if (!emailFilled && !phoneFilled) {
-      setContactError("Please enter at least your Email Address or Phone Number.");
-      return;
-    }
+    if (!validateForm()) return;
     setContactError("");
     setIsSubmitting(true);
     try {
       const response = await fetch("/api/contact", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          phone: formData.phone.trim() ? `${countryDialCode} ${formData.phone.trim()}` : "",
+        }),
       });
       const payload = (await response.json().catch(() => null)) as
         | { ok?: boolean; error?: string }
@@ -339,7 +388,7 @@ export default function ContactPage() {
           width: 100%;
           box-sizing: border-box;
           background: rgba(140, 132, 166, 0.21);
-          border: none;
+          border: 1.5px solid transparent;
           border-radius: 6px;
           height: 52px;
           padding: 0 18px;
@@ -348,7 +397,7 @@ export default function ContactPage() {
           font-weight: 400;
           color: #111111;
           outline: none;
-          transition: background 0.2s ease, box-shadow 0.2s ease;
+          transition: background 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
         }
         .contact-field::placeholder {
           color: rgba(17, 16, 21, 0.45);
@@ -357,13 +406,51 @@ export default function ContactPage() {
           background: rgba(140, 132, 166, 0.32);
           box-shadow: 0 0 0 2px rgba(153, 120, 255, 0.4);
         }
+        .contact-field.field-error {
+          border-color: #E53935 !important;
+          background: rgba(229, 57, 53, 0.04);
+        }
+        .contact-field-group {
+          position: relative;
+          display: flex;
+          flex-direction: column;
+          width: 100%;
+        }
+        .contact-placeholder-overlay {
+          position: absolute;
+          top: 17px;
+          left: 18px;
+          pointer-events: none;
+          font-family: 'Inter', sans-serif;
+          font-size: 14px;
+          font-weight: 400;
+          color: rgba(17, 16, 21, 0.45);
+          display: inline-flex;
+          align-items: center;
+          user-select: none;
+          line-height: 1;
+        }
+        .contact-field-required {
+          color: #E53935;
+          margin-left: 3px;
+          font-weight: 700;
+          font-size: 14px;
+        }
+        .contact-field-error-text {
+          font-family: 'Inter', sans-serif;
+          font-size: 11.5px;
+          color: #E53935;
+          margin-top: 4px;
+          font-weight: 500;
+          line-height: 1.3;
+        }
 
         /* Reduced textarea height to 150px per user request */
         .contact-textarea {
           width: 100%;
           box-sizing: border-box;
           background: rgba(140, 132, 166, 0.21);
-          border: none;
+          border: 1.5px solid transparent;
           border-radius: 6px;
           height: 150px;
           padding: 16px 18px;
@@ -374,7 +461,7 @@ export default function ContactPage() {
           outline: none;
           resize: vertical;
           min-height: 120px;
-          transition: background 0.2s ease, box-shadow 0.2s ease;
+          transition: background 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
         }
         .contact-textarea::placeholder {
           color: rgba(17, 16, 21, 0.45);
@@ -383,6 +470,11 @@ export default function ContactPage() {
           background: rgba(140, 132, 166, 0.32);
           box-shadow: 0 0 0 2px rgba(153, 120, 255, 0.4);
         }
+        .contact-textarea.field-error {
+          border-color: #E53935 !important;
+          background: rgba(229, 57, 53, 0.04);
+        }
+
 
         /* Checkbox row */
         .contact-checkbox-row {
@@ -636,78 +728,130 @@ export default function ContactPage() {
                 <form className="contact-form" onSubmit={handleSubmit} noValidate>
                   {/* First Name + Last Name */}
                   <div className="contact-form-row">
-                    <input
-                      id="contact-first-name"
-                      type="text"
-                      required
-                      placeholder="First Name"
-                      className="contact-field"
-                      value={formData.firstName}
-                      onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                    />
-                    <input
-                      id="contact-last-name"
-                      type="text"
-                      required
-                      placeholder="Last Name"
-                      className="contact-field"
-                      value={formData.lastName}
-                      onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                    />
+                    <div className="contact-field-group">
+                      <input
+                        id="contact-first-name"
+                        type="text"
+                        className={`contact-field${fieldErrors.firstName ? " field-error" : ""}`}
+                        value={formData.firstName}
+                        onChange={(e) => handleNameChange("firstName", e.target.value)}
+                        autoComplete="given-name"
+                      />
+                      {!formData.firstName && (
+                        <span className="contact-placeholder-overlay">
+                          First Name <span className="contact-field-required">*</span>
+                        </span>
+                      )}
+                      {fieldErrors.firstName && (
+                        <span className="contact-field-error-text">{fieldErrors.firstName}</span>
+                      )}
+                    </div>
+
+                    <div className="contact-field-group">
+                      <input
+                        id="contact-last-name"
+                        type="text"
+                        className={`contact-field${fieldErrors.lastName ? " field-error" : ""}`}
+                        value={formData.lastName}
+                        onChange={(e) => handleNameChange("lastName", e.target.value)}
+                        autoComplete="family-name"
+                      />
+                      {!formData.lastName && (
+                        <span className="contact-placeholder-overlay">
+                          Last Name <span className="contact-field-required">*</span>
+                        </span>
+                      )}
+                      {fieldErrors.lastName && (
+                        <span className="contact-field-error-text">{fieldErrors.lastName}</span>
+                      )}
+                    </div>
                   </div>
 
-                  {/* Email Address — optional if phone filled */}
-                  <input
-                    id="contact-email"
-                    type="email"
-                    placeholder={emailPlaceholder}
-                    className="contact-field"
-                    value={formData.email}
-                    onChange={(e) => {
-                      setFormData({ ...formData, email: e.target.value });
-                      setContactError("");
-                    }}
-                  />
+                  {/* Email Address */}
+                  <div className="contact-field-group">
+                    <input
+                      id="contact-email"
+                      type="email"
+                      className={`contact-field${fieldErrors.email ? " field-error" : ""}`}
+                      value={formData.email}
+                      onChange={(e) => handleEmailChange(e.target.value)}
+                      autoComplete="email"
+                    />
+                    {!formData.email && (
+                      <span className="contact-placeholder-overlay">
+                        Email Address <span className="contact-field-required">*</span>
+                      </span>
+                    )}
+                    {fieldErrors.email && (
+                      <span className="contact-field-error-text">{fieldErrors.email}</span>
+                    )}
+                  </div>
 
-                  {/* Phone + Service — phone optional if email filled */}
+                  {/* Phone + Service */}
                   <div className="contact-form-row">
-                    <input
-                      id="contact-phone"
-                      type="tel"
-                      placeholder={phonePlaceholder}
-                      className="contact-field"
-                      value={formData.phone}
-                      onChange={(e) => {
-                        setFormData({ ...formData, phone: e.target.value });
-                        setContactError("");
-                      }}
-                    />
-                    <input
-                      id="contact-service"
-                      type="text"
-                      placeholder="Service Interested In"
-                      className="contact-field"
-                      value={formData.service}
-                      onChange={(e) => setFormData({ ...formData, service: e.target.value })}
-                    />
+                    <div className="contact-field-group">
+                      <CountryPhoneInput
+                        id="contact-phone"
+                        value={formData.phone}
+                        onChange={(nationalNumber, _full, country) => {
+                          setFormData((prev) => ({ ...prev, phone: nationalNumber }));
+                          setSelectedCountry(country.code);
+                          setCountryDialCode(country.dialCode);
+                          if (fieldErrors.phone) {
+                            setFieldErrors((prev) => {
+                              const n = { ...prev };
+                              delete n.phone;
+                              return n;
+                            });
+                          }
+                        }}
+                        selectedCountry={selectedCountry}
+                        onCountryChange={(country) => {
+                          setSelectedCountry(country.code);
+                          setCountryDialCode(country.dialCode);
+                        }}
+                        error={fieldErrors.phone}
+                        variant="contact"
+                        placeholder="Phone Number *"
+                      />
+                    </div>
+
+                    <div className="contact-field-group">
+                      <input
+                        id="contact-service"
+                        type="text"
+                        placeholder="Service Interested In"
+                        className="contact-field"
+                        value={formData.service}
+                        onChange={(e) => setFormData((prev) => ({ ...prev, service: e.target.value }))}
+                      />
+                    </div>
                   </div>
 
-                  {/* Inline error when neither email nor phone provided */}
+                  {/* Project Description */}
+                  <div className="contact-field-group">
+                    <textarea
+                      id="contact-msg"
+                      className={`contact-textarea${fieldErrors.message ? " field-error" : ""}`}
+                      value={formData.message}
+                      onChange={(e) => handleMessageChange(e.target.value)}
+                    />
+                    {!formData.message && (
+                      <span className="contact-placeholder-overlay" style={{ top: "16px" }}>
+                        Tell Us About Your Project <span className="contact-field-required">*</span>
+                      </span>
+                    )}
+                    {fieldErrors.message && (
+                      <span className="contact-field-error-text">{fieldErrors.message}</span>
+                    )}
+                  </div>
+
+                  {/* Server error banner */}
                   {contactError && (
-                    <p style={{ color: "#E55", fontSize: "13px", marginTop: "-4px", marginBottom: "2px" }}>
+                    <p style={{ color: "#E53935", fontSize: "13px", margin: "2px 0 0 0" }}>
                       {contactError}
                     </p>
                   )}
-
-                  {/* Project Description */}
-                  <textarea
-                    id="contact-msg"
-                    required
-                    placeholder="Tell Us About Your Project"
-                    className="contact-textarea"
-                    value={formData.message}
-                    onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                  />
 
                   {/* Checkbox */}
                   <div className="contact-checkbox-row">

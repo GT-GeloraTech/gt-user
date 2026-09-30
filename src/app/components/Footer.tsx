@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { useCallback } from "react";
+import { usePageLoader } from "./PageLoader";
 
 interface FooterProps {
   showCta?: boolean;
@@ -31,6 +32,7 @@ const PARTICLES = [
 export default function Footer({ showCta = true }: FooterProps) {
   const router = useRouter();
   const pathname = usePathname();
+  const { showLoader } = usePageLoader();
 
   const handleNavToTop = useCallback(
     (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
@@ -41,6 +43,7 @@ export default function Footer({ showCta = true }: FooterProps) {
       if (pathname === href) {
         window.scrollTo({ top: 0, left: 0, behavior: "smooth" });
       } else {
+        showLoader();
         window.scrollTo({ top: 0, left: 0, behavior: "instant" });
         router.push(href);
         setTimeout(() => {

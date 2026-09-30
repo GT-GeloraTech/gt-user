@@ -2,6 +2,8 @@
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import CountryPhoneInput, { validatePhoneForCountry } from '@/app/components/CountryPhoneInput';
+import type { CountryCode } from 'libphonenumber-js';
 
 interface ApplyModalProps {
   isOpen: boolean;
@@ -30,6 +32,9 @@ export default function ApplyModal({ isOpen, onClose, defaultRole = '' }: ApplyM
     applyingFor: defaultRole,
     relevantLink: '',
   });
+
+  const [selectedCountry, setSelectedCountry] = useState<CountryCode>('IN');
+  const [countryDialCode, setCountryDialCode] = useState('+91');
 
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -70,7 +75,15 @@ export default function ApplyModal({ isOpen, onClose, defaultRole = '' }: ApplyM
   }, [isOpen]);
 
   const handleChange = (field: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+    let sanitized = value;
+    if (field === 'fullName') {
+      // Disallow numbers and symbols
+      sanitized = value.replace(/[^a-zA-Z\s'-]/g, '');
+    } else if (field === 'phone') {
+      // Disallow non-digits and allow 10 digits only
+      sanitized = value.replace(/\D/g, '').slice(0, 10);
+    }
+    setFormData((prev) => ({ ...prev, [field]: sanitized }));
     if (errors[field]) {
       setErrors((prev) => {
         const next = { ...prev };
@@ -131,12 +144,13 @@ export default function ApplyModal({ isOpen, onClose, defaultRole = '' }: ApplyM
 
     if (!formData.fullName.trim()) {
       newErrors.fullName = 'Full Name is required';
+    } else if (!/^[a-zA-Z\s'-]+$/.test(formData.fullName.trim())) {
+      newErrors.fullName = 'Full Name can only contain letters';
     }
 
-    if (!formData.phone.trim()) {
-      newErrors.phone = 'Phone Number is required';
-    } else if (!/^\d{8,14}$/.test(formData.phone.replace(/[\s-]/g, ''))) {
-      newErrors.phone = 'Enter a valid phone number';
+    const phoneError = validatePhoneForCountry(formData.phone, selectedCountry);
+    if (phoneError) {
+      newErrors.phone = phoneError;
     }
 
     if (!formData.email.trim()) {
@@ -182,6 +196,7 @@ export default function ApplyModal({ isOpen, onClose, defaultRole = '' }: ApplyM
     try {
       const body = new FormData();
       body.set("fullName", formData.fullName);
+      body.set("countryCode", countryDialCode);
       body.set("phone", formData.phone);
       body.set("email", formData.email);
       body.set("experience", formData.experience);
@@ -677,44 +692,29 @@ export default function ApplyModal({ isOpen, onClose, defaultRole = '' }: ApplyM
                 <label className="apply-label" htmlFor="apply-phone">
                   Phone Number <span className="apply-required">*</span>
                 </label>
-                <div className="apply-phone-row">
-                  <div className="apply-phone-flag">
-                    <svg
-                      width="18"
-                      height="13"
-                      viewBox="0 0 640 480"
-                      style={{ borderRadius: '2px', flexShrink: 0 }}
-                    >
-                      <path fill="#f93" d="M0 0h640v160H0z" />
-                      <path fill="#fff" d="M0 160h640v160H0z" />
-                      <path fill="#128807" d="M0 320h640v160H0z" />
-                      <circle cx="320" cy="240" r="40" fill="#008" />
-                      <circle cx="320" cy="240" r="35" fill="#fff" />
-                      <circle cx="320" cy="240" r="8" fill="#008" />
-                    </svg>
-                    <span>+91</span>
-                    <svg
-                      width="10"
-                      height="10"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2.5"
-                    >
-                      <polyline points="6 9 12 15 18 9" />
-                    </svg>
-                  </div>
-                  <input
-                    id="apply-phone"
-                    type="tel"
-                    className={`apply-input${errors.phone ? ' input-error' : ''}`}
-                    placeholder="Phone number"
-                    style={{ flex: 1 }}
-                    value={formData.phone}
-                    onChange={(e) => handleChange('phone', e.target.value)}
-                  />
-                </div>
-                {errors.phone && <span className="apply-error-text">{errors.phone}</span>}
+                <CountryPhoneInput
+                  id="apply-phone"
+                  value={formData.phone}
+                  onChange={(nationalNumber, _full, country) => {
+                    setFormData((prev) => ({ ...prev, phone: nationalNumber }));
+                    setSelectedCountry(country.code);
+                    setCountryDialCode(country.dialCode);
+                    if (errors.phone) {
+                      setErrors((prev) => {
+                        const next = { ...prev };
+                        delete next.phone;
+                        return next;
+                      });
+                    }
+                  }}
+                  selectedCountry={selectedCountry}
+                  onCountryChange={(country) => {
+                    setSelectedCountry(country.code);
+                    setCountryDialCode(country.dialCode);
+                  }}
+                  error={errors.phone}
+                  variant="modal"
+                />
               </div>
             </div>
 
