@@ -16,12 +16,12 @@ const LEADERSHIP_DATA: TeamMember[] = [
   {
     name: "Gajraj Singh",
     role: "Founder & CEO",
-    image: "/asset/maleImg.png",
+    image: "/asset/GajrajImg.png",
   },
   {
     name: "Harsh Patyal",
     role: "Co-Founder & Team managment",
-    image: "/asset/maleImg.png",
+    image: "/asset/HarshImg1.png",
   },
 ];
 
@@ -29,37 +29,37 @@ const TEAM_DATA: TeamMember[] = [
   {
     name: "Arushi Singla",
     role: "UI/UX Designer",
-    image: "/asset/femaleImg.png",
+    image: "/asset/arushiImg.png",
   },
   {
     name: "Bhavini Jain",
     role: "UI/UX Designer",
-    image: "/asset/femaleImg.png",
+    image: "/asset/bhaviniImg.png",
   },
   {
     name: "Jessica Varghese",
     role: "UI/UX Designer",
-    image: "/asset/femaleImg.png",
-  },
-  {
-    name: "Prathamesh Ugale",
-    role: "Full Stack Developer",
-    image: "/asset/maleImg.png",
-  },
-  {
-    name: "Flint Dias",
-    role: "Software Developer",
-    image: "/asset/maleImg.png",
-  },
-  {
-    name: "Naga Vishnu",
-    role: "Frontend Developer",
-    image: "/asset/maleImg.png",
+    image: "/asset/JessicaImg.png",
   },
   {
     name: "Pranoti Chakwate",
     role: "Mobile Developer",
-    image: "/asset/femaleImg.png",
+    image: "/asset/PranotiImg.png",
+  },
+  {
+    name: "Naga Vishnu",
+    role: "Frontend Developer",
+    image: "/asset/VishnuImg.png",
+  },
+  {
+    name: "Priyansh Khatwa",
+    role: "Flutter Developer",
+    image: "/asset/KhatwaImg.png",
+  },
+  {
+    name: "Flint Dias",
+    role: "Software Developer",
+    image: "/asset/FlintImg.png",
   },
   {
     name: "Rajat Rana",
@@ -392,7 +392,7 @@ export default function CareersPage() {
 
         .team-cards-grid {
           display: grid;
-          grid-template-columns: repeat(4, 168px);
+          grid-template-columns: repeat(4, 178px);
           gap: 48px;
           justify-content: center;
           margin-top: 16px;
@@ -428,10 +428,10 @@ export default function CareersPage() {
 
         .person-card-avatar {
           position: absolute;
-          top: 5px;
+          top: -5px;
           left: 50%;
           transform: translateX(-50%);
-          height: 100px;
+          height: 120px;
           width: auto;
           object-fit: contain;
           pointer-events: none;
@@ -994,27 +994,31 @@ export default function CareersPage() {
         /* 1081px - 1439px (Laptops) */
         @media (max-width: 1439px) and (min-width: 1081px) {
           .team-cards-grid {
-            grid-template-columns: repeat(4, 168px);
+            grid-template-columns: repeat(4, 178px);
             gap: 16px;
           }
           .person-card {
-            width: 168px;
-            height: 166px;
+            width: 178px;
+            height: 164px;
           }
         }
 
         /* Tablet Landscape / Small Laptops (769px - 1080px) */
         @media (max-width: 1080px) and (min-width: 769px) {
           .team-cards-grid {
-            grid-template-columns: repeat(4, 150px);
+            grid-template-columns: repeat(4, 160px);
             gap: 12px;
           }
           .person-card {
-            width: 150px;
-            height: 154px;
+            width: 160px;
+            height: 164px;
+          }
+          .leadership-cards-grid .person-card {
+            width: 160px !important;
+            height: 164px !important;
           }
           .person-card-avatar {
-            height: 90px;
+            height: 100px;
           }
           .person-name-pill {
             font-size: 9px;

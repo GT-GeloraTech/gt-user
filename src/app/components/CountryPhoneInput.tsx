@@ -138,7 +138,8 @@ export interface CountryPhoneInputProps {
   selectedCountry?: CountryCode;
   onCountryChange?: (country: CountryItem) => void;
   error?: string;
-  placeholder?: string;
+  placeholder?: React.ReactNode;
+  placeholderNode?: React.ReactNode;
   variant?: "modal" | "contact";
   required?: boolean;
   disabled?: boolean;
@@ -152,6 +153,7 @@ export default function CountryPhoneInput({
   onCountryChange,
   error,
   placeholder,
+  placeholderNode,
   variant = "contact",
   required = false,
   disabled = false,
@@ -258,11 +260,16 @@ export default function CountryPhoneInput({
     onChange(clean, full, currentCountry);
   };
 
-  const dynamicPlaceholder =
-    placeholder ||
-    (currentCountry.code === "IN"
-      ? "Enter 10-digit number"
-      : `Enter ${currentCountry.maxLen}-digit number`);
+  const customPlaceholder =
+    placeholderNode || (typeof placeholder !== "string" ? placeholder : null);
+  const stringPlaceholder = typeof placeholder === "string" ? placeholder : "";
+
+  const dynamicPlaceholder = customPlaceholder
+    ? ""
+    : (stringPlaceholder ||
+      (currentCountry.code === "IN"
+        ? "Enter 10-digit number"
+        : `Enter ${currentCountry.maxLen}-digit number`));
 
   const isModal = variant === "modal";
 
@@ -336,8 +343,8 @@ export default function CountryPhoneInput({
           background: rgba(140, 132, 166, 0.32);
         }
         .cpi-contact-theme .cpi-trigger-btn.active {
-          background: rgba(140, 132, 166, 0.32);
-          box-shadow: 0 0 0 2px rgba(153, 120, 255, 0.4);
+          border: 1.5px solid rgba(139, 99, 255, 0.6);
+          box-shadow: 0 0 0 2px rgba(139, 99, 255, 0.14);
         }
 
         /* Flag Image & Fallback */
@@ -371,6 +378,47 @@ export default function CountryPhoneInput({
         }
 
         /* ── Input Box ── */
+        .cpi-input-wrapper {
+          position: relative;
+          flex: 1;
+          display: flex;
+          align-items: center;
+          min-width: 0;
+        }
+        .cpi-input-wrapper .cpi-input {
+          width: 100%;
+        }
+        .cpi-placeholder-overlay {
+          position: absolute;
+          top: 50%;
+          transform: translateY(-50%);
+          pointer-events: none;
+          user-select: none;
+          display: inline-flex;
+          align-items: center;
+          line-height: 1;
+          z-index: 1;
+        }
+        .cpi-contact-theme .cpi-placeholder-overlay {
+          left: 18px;
+          font-family: 'Inter', sans-serif;
+          font-size: 14px;
+          font-weight: 400;
+          color: rgba(17, 16, 21, 0.45);
+        }
+        .cpi-modal-theme .cpi-placeholder-overlay {
+          left: 16px;
+          font-family: 'Inter', sans-serif;
+          font-size: 13.5px;
+          font-weight: 400;
+          color: rgba(46, 46, 47, 0.45);
+        }
+        .cpi-required {
+          color: #E53935;
+          margin-left: 3px;
+          font-weight: 700;
+        }
+
         .cpi-input {
           flex: 1;
           box-sizing: border-box;
@@ -401,6 +449,14 @@ export default function CountryPhoneInput({
           border-color: #E53935 !important;
           background: #FFFDFD;
         }
+        .cpi-modal-theme .cpi-input:-webkit-autofill,
+        .cpi-modal-theme .cpi-input:-webkit-autofill:hover,
+        .cpi-modal-theme .cpi-input:-webkit-autofill:focus {
+          -webkit-box-shadow: 0 0 0 1000px #FFFFFF inset !important;
+          -webkit-text-fill-color: #141415 !important;
+          border-color: #744FE7 !important;
+          transition: background-color 9999s ease-in-out 0s;
+        }
 
         /* Contact theme input */
         .cpi-contact-theme .cpi-input {
@@ -416,12 +472,20 @@ export default function CountryPhoneInput({
           color: rgba(17, 16, 21, 0.45);
         }
         .cpi-contact-theme .cpi-input:focus {
-          background: rgba(140, 132, 166, 0.32);
-          box-shadow: 0 0 0 2px rgba(153, 120, 255, 0.4);
+          border-color: #8B63FF;
+          box-shadow: 0 0 0 3px rgba(139, 99, 255, 0.14);
         }
         .cpi-contact-theme .cpi-input.error {
           border-color: #E53935 !important;
           background: rgba(229, 57, 53, 0.04);
+        }
+        .cpi-contact-theme .cpi-input:-webkit-autofill,
+        .cpi-contact-theme .cpi-input:-webkit-autofill:hover,
+        .cpi-contact-theme .cpi-input:-webkit-autofill:focus {
+          -webkit-box-shadow: 0 0 0 1000px rgba(140, 132, 166, 0.21) inset !important;
+          -webkit-text-fill-color: #111111 !important;
+          border-color: #8B63FF !important;
+          transition: background-color 9999s ease-in-out 0s;
         }
 
         /* ── Dropdown Panel ── */
@@ -631,21 +695,28 @@ export default function CountryPhoneInput({
         </button>
 
         {/* National Number Input */}
-        <input
-          ref={numberInputRef}
-          id={id}
-          type="tel"
-          inputMode="numeric"
-          pattern="[0-9]*"
-          maxLength={currentCountry.maxLen}
-          className={`cpi-input ${error ? "error" : ""}`}
-          value={value}
-          onChange={handleInputChange}
-          placeholder={dynamicPlaceholder}
-          required={required}
-          disabled={disabled}
-          autoComplete="tel-national"
-        />
+        <div className="cpi-input-wrapper">
+          <input
+            ref={numberInputRef}
+            id={id}
+            type="tel"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            maxLength={currentCountry.maxLen}
+            className={`cpi-input ${error ? "error" : ""}`}
+            value={value}
+            onChange={handleInputChange}
+            placeholder={dynamicPlaceholder}
+            required={required}
+            disabled={disabled}
+            autoComplete="tel-national"
+          />
+          {customPlaceholder && !value && (
+            <span className="cpi-placeholder-overlay">
+              {customPlaceholder}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Error message */}

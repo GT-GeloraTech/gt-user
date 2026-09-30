@@ -45,6 +45,30 @@ export default function ApplyModal({ isOpen, onClose, defaultRole = '' }: ApplyM
   const fileInputRef = useRef<HTMLInputElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
 
+  // Reset form and close modal
+  const handleClose = useCallback(() => {
+    setSubmitted(false);
+    setFormData({
+      fullName: '',
+      phone: '',
+      email: '',
+      experience: '',
+      currentCtc: '',
+      expectedCtc: '',
+      noticePeriod: '',
+      applyingFor: defaultRole,
+      relevantLink: '',
+    });
+    setResumeFile(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+    setErrors({});
+    setSelectedCountry('IN');
+    setCountryDialCode('+91');
+    onClose();
+  }, [defaultRole, onClose]);
+
   // Sync defaultRole when prop updates
   useEffect(() => {
     if (defaultRole) {
@@ -56,11 +80,18 @@ export default function ApplyModal({ isOpen, onClose, defaultRole = '' }: ApplyM
   useEffect(() => {
     if (!isOpen) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') handleClose();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [isOpen, onClose]);
+  }, [isOpen, handleClose]);
+
+  // Reset state when closed
+  useEffect(() => {
+    if (!isOpen) {
+      setSubmitted(false);
+    }
+  }, [isOpen]);
 
   // Lock body scroll when modal is open
   useEffect(() => {
@@ -222,10 +253,6 @@ export default function ApplyModal({ isOpen, onClose, defaultRole = '' }: ApplyM
         return;
       }
       setSubmitted(true);
-      setTimeout(() => {
-        setSubmitted(false);
-        onClose();
-      }, 2200);
     } catch {
       setErrors({ resume: "Something went wrong. Please try again." });
     } finally {
@@ -262,10 +289,95 @@ export default function ApplyModal({ isOpen, onClose, defaultRole = '' }: ApplyM
           to   { opacity: 1; }
         }
 
+        /* ─── Flip Container ─── */
+        .apply-flip-scene {
+          perspective: 1200px;
+          -webkit-perspective: 1200px;
+          width: 100%;
+          max-width: 719px;
+          position: relative;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          animation: panelSlideUp 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        @keyframes panelSlideUp {
+          from { opacity: 0; transform: translateY(24px) scale(0.98); }
+          to   { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        .apply-flip-card {
+          position: relative;
+          width: 100%;
+          transform-style: preserve-3d;
+          -webkit-transform-style: preserve-3d;
+          transition: transform 0.72s cubic-bezier(0.45, 0.05, 0.55, 0.95);
+        }
+        .apply-flip-card.is-flipped {
+          transform: rotateY(180deg);
+          -webkit-transform: rotateY(180deg);
+        }
+
+        .apply-flip-front,
+        .apply-flip-back,
+        .apply-panel,
+        .apply-success-box {
+          backface-visibility: hidden;
+          -webkit-backface-visibility: hidden;
+        }
+
+        .apply-flip-front {
+          display: flex;
+          flex-direction: column;
+          width: 100%;
+          position: relative;
+          z-index: 2;
+          transition: opacity 0.2s 0.22s, visibility 0s 0.36s;
+        }
+        .apply-flip-back {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          transform: rotateY(180deg);
+          -webkit-transform: rotateY(180deg);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 1;
+          transition: opacity 0.2s 0.22s, visibility 0s 0.36s;
+        }
+
+        .apply-flip-card.is-flipped .apply-flip-front {
+          opacity: 0;
+          visibility: hidden;
+          pointer-events: none;
+          z-index: 1;
+        }
+        .apply-flip-card:not(.is-flipped) .apply-flip-back {
+          opacity: 0;
+          visibility: hidden;
+          pointer-events: none;
+          z-index: 1;
+        }
+
+        .apply-flip-card.is-flipped .apply-flip-back {
+          opacity: 1;
+          visibility: visible;
+          pointer-events: auto;
+          z-index: 5;
+        }
+        .apply-flip-card:not(.is-flipped) .apply-flip-front {
+          opacity: 1;
+          visibility: visible;
+          pointer-events: auto;
+          z-index: 5;
+        }
+
         .apply-panel {
           position: relative;
           width: 100%;
-          max-width: 719px;
           max-height: 90vh;
           display: flex;
           flex-direction: column;
@@ -273,12 +385,7 @@ export default function ApplyModal({ isOpen, onClose, defaultRole = '' }: ApplyM
           border-radius: 24px;
           box-sizing: border-box;
           box-shadow: 0 24px 70px rgba(0, 0, 0, 0.32);
-          animation: panelSlideUp 0.28s cubic-bezier(0.16, 1, 0.3, 1);
           overflow: hidden;
-        }
-        @keyframes panelSlideUp {
-          from { opacity: 0; transform: translateY(24px) scale(0.98); }
-          to   { opacity: 1; transform: translateY(0) scale(1); }
         }
 
         /* ─── Fixed Header ─── */
@@ -410,6 +517,14 @@ export default function ApplyModal({ isOpen, onClose, defaultRole = '' }: ApplyM
         .apply-input.input-error {
           border-color: #E53935 !important;
           background: #FFFDFD;
+        }
+        .apply-input:-webkit-autofill,
+        .apply-input:-webkit-autofill:hover,
+        .apply-input:-webkit-autofill:focus {
+          -webkit-box-shadow: 0 0 0 1000px #FFFFFF inset !important;
+          -webkit-text-fill-color: #141415 !important;
+          border-color: #744FE7 !important;
+          transition: background-color 9999s ease-in-out 0s;
         }
         .apply-error-text {
           font-family: 'Inter', sans-serif;
@@ -561,10 +676,6 @@ export default function ApplyModal({ isOpen, onClose, defaultRole = '' }: ApplyM
           transform: translateY(-1px);
           box-shadow: 0 6px 20px rgba(116, 79, 231, 0.35);
         }
-        .apply-submit-btn.submitted {
-          background: #3cba7c;
-          border-color: #2ea66a;
-        }
         .apply-disclaimer {
           display: flex;
           align-items: center;
@@ -582,10 +693,97 @@ export default function ApplyModal({ isOpen, onClose, defaultRole = '' }: ApplyM
           width: 100%;
         }
 
+        /* ─── Flip Back: Success Card ─── */
+        .apply-success-box {
+          position: relative;
+          width: 100%;
+          height: 100%;
+          min-height: 480px;
+          background: #F4F0FF;
+          border-radius: 24px;
+          border: 1.5px solid rgba(139, 99, 255, 0.22);
+          box-shadow: 0 24px 70px rgba(0, 0, 0, 0.32);
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          text-align: center;
+          padding: 48px 36px;
+          box-sizing: border-box;
+          gap: 18px;
+        }
+        .apply-success-close {
+          position: absolute;
+          top: 20px;
+          right: 20px;
+          width: 36px;
+          height: 36px;
+          border-radius: 50%;
+          background: rgba(139, 99, 255, 0.10);
+          border: 1px solid rgba(139, 99, 255, 0.20);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          color: #744FE7;
+          transition: background 0.2s ease, transform 0.2s ease, color 0.2s ease;
+          flex-shrink: 0;
+        }
+        .apply-success-close:hover {
+          background: rgba(139, 99, 255, 0.18);
+          transform: scale(1.08);
+          color: #5F35E2;
+        }
+        .apply-success-icon-ring {
+          width: 76px;
+          height: 76px;
+          border-radius: 50%;
+          background: linear-gradient(135deg, #8B63FF 0%, #6234E2 100%);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+          box-shadow: 0 0 0 14px rgba(139, 99, 255, 0.12);
+          animation: applySuccessPulse 2.2s ease-in-out infinite;
+        }
+        @keyframes applySuccessPulse {
+          0%, 100% { box-shadow: 0 0 0 14px rgba(139, 99, 255, 0.12); }
+          50%       { box-shadow: 0 0 0 22px rgba(139, 99, 255, 0.05); }
+        }
+        .apply-success-title {
+          font-family: 'Inter', sans-serif;
+          font-size: 26px;
+          font-weight: 700;
+          color: #141415;
+          margin: 0;
+          line-height: 1.25;
+        }
+        .apply-success-desc {
+          font-family: 'Inter', sans-serif;
+          font-size: 15px;
+          font-weight: 400;
+          color: rgba(46, 46, 47, 0.75);
+          line-height: 1.65;
+          margin: 0;
+          max-width: 440px;
+        }
+
         @media (max-width: 600px) {
           .apply-panel {
             max-height: 94vh;
             border-radius: 18px;
+          }
+          .apply-success-box {
+            border-radius: 18px;
+            padding: 36px 20px;
+            gap: 14px;
+            min-height: 380px;
+          }
+          .apply-success-title {
+            font-size: 20px;
+          }
+          .apply-success-desc {
+            font-size: 13.5px;
           }
           .apply-modal-header {
             padding: 16px 18px 12px;
@@ -615,338 +813,374 @@ export default function ApplyModal({ isOpen, onClose, defaultRole = '' }: ApplyM
         className="apply-overlay"
         ref={overlayRef}
         onClick={(e) => {
-          if (e.target === overlayRef.current) onClose();
+          if (e.target === overlayRef.current) handleClose();
         }}
         role="dialog"
         aria-modal="true"
         aria-label="Apply for a Position"
       >
-        <form className="apply-panel" onSubmit={handleSubmit} noValidate>
-          {/* Fixed Header */}
-          <div className="apply-modal-header">
-            <div className="apply-header-top">
-              <div className="apply-title-row">
-                <svg
-                  className="apply-title-icon"
-                  width="22"
-                  height="22"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                </svg>
-                <h2 className="apply-title">Apply for a Position</h2>
-              </div>
-              <button
-                type="button"
-                className="apply-close-btn"
-                onClick={onClose}
-                aria-label="Close modal"
-              >
-                <svg
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <line x1="18" y1="6" x2="6" y2="18" />
-                  <line x1="6" y1="6" x2="18" y2="18" />
-                </svg>
-              </button>
+        <div className="apply-flip-scene">
+          <div className={`apply-flip-card${submitted ? ' is-flipped' : ''}`}>
+            {/* FRONT FACE: Form Panel */}
+            <div className="apply-flip-front">
+              <form className="apply-panel" onSubmit={handleSubmit} noValidate>
+                {/* Fixed Header */}
+                <div className="apply-modal-header">
+                  <div className="apply-header-top">
+                    <div className="apply-title-row">
+                      <svg
+                        className="apply-title-icon"
+                        width="22"
+                        height="22"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                      </svg>
+                      <h2 className="apply-title">Apply for a Position</h2>
+                    </div>
+                    <button
+                      type="button"
+                      className="apply-close-btn"
+                      onClick={handleClose}
+                      aria-label="Close modal"
+                    >
+                      <svg
+                        width="20"
+                        height="20"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                      </svg>
+                    </button>
+                  </div>
+
+                  <p className="apply-subtitle">
+                    Tell us a little about yourself. It only takes a minute.
+                  </p>
+                </div>
+
+                {/* Scrollable Body */}
+                <div className="apply-modal-body">
+                  {/* Row 1: Full Name + Phone Number */}
+                  <div className="apply-field-row">
+                    <div className="apply-field-group" style={{ flex: 1 }}>
+                      <label className="apply-label" htmlFor="apply-fullname">
+                        Full Name <span className="apply-required">*</span>
+                      </label>
+                      <input
+                        id="apply-fullname"
+                        type="text"
+                        className={`apply-input${errors.fullName ? ' input-error' : ''}`}
+                        placeholder="Enter your full name"
+                        value={formData.fullName}
+                        onChange={(e) => handleChange('fullName', e.target.value)}
+                      />
+                      {errors.fullName && <span className="apply-error-text">{errors.fullName}</span>}
+                    </div>
+
+                    <div className="apply-field-group" style={{ flex: 1 }}>
+                      <label className="apply-label" htmlFor="apply-phone">
+                        Phone Number <span className="apply-required">*</span>
+                      </label>
+                      <CountryPhoneInput
+                        id="apply-phone"
+                        value={formData.phone}
+                        onChange={(nationalNumber, _full, country) => {
+                          setFormData((prev) => ({ ...prev, phone: nationalNumber }));
+                          setSelectedCountry(country.code);
+                          setCountryDialCode(country.dialCode);
+                          if (errors.phone) {
+                            setErrors((prev) => {
+                              const next = { ...prev };
+                              delete next.phone;
+                              return next;
+                            });
+                          }
+                        }}
+                        selectedCountry={selectedCountry}
+                        onCountryChange={(country) => {
+                          setSelectedCountry(country.code);
+                          setCountryDialCode(country.dialCode);
+                        }}
+                        error={errors.phone}
+                        variant="modal"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Row 2: Email Address (60%) + Experience (40%) in one row */}
+                  <div className="apply-field-row">
+                    <div className="apply-field-group" style={{ flex: '0 0 calc(60% - 7px)' }}>
+                      <label className="apply-label" htmlFor="apply-email">
+                        Email Address <span className="apply-required">*</span>
+                      </label>
+                      <input
+                        id="apply-email"
+                        type="email"
+                        className={`apply-input${errors.email ? ' input-error' : ''}`}
+                        placeholder="Enter your email address"
+                        value={formData.email}
+                        onChange={(e) => handleChange('email', e.target.value)}
+                      />
+                      {errors.email && <span className="apply-error-text">{errors.email}</span>}
+                    </div>
+
+                    <div className="apply-field-group" style={{ flex: '0 0 calc(40% - 7px)' }}>
+                      <label className="apply-label" htmlFor="apply-exp">
+                        Experience <span className="apply-required">*</span>
+                      </label>
+                      <input
+                        id="apply-exp"
+                        type="text"
+                        className={`apply-input${errors.experience ? ' input-error' : ''}`}
+                        placeholder="Experience"
+                        value={formData.experience}
+                        onChange={(e) => handleChange('experience', e.target.value)}
+                      />
+                      {errors.experience && <span className="apply-error-text">{errors.experience}</span>}
+                    </div>
+                  </div>
+
+                  {/* Row 3: Current CTC (50%) + Expected CTC (50%) in one row */}
+                  <div className="apply-field-row">
+                    <div className="apply-field-group" style={{ flex: 1 }}>
+                      <label className="apply-label" htmlFor="apply-current-ctc">
+                        Current CTC (in LPA) <span className="apply-required">*</span>
+                      </label>
+                      <input
+                        id="apply-current-ctc"
+                        type="text"
+                        className={`apply-input${errors.currentCtc ? ' input-error' : ''}`}
+                        placeholder="Enter your Current CTC"
+                        value={formData.currentCtc}
+                        onChange={(e) => handleChange('currentCtc', e.target.value)}
+                      />
+                      {errors.currentCtc && <span className="apply-error-text">{errors.currentCtc}</span>}
+                    </div>
+
+                    <div className="apply-field-group" style={{ flex: 1 }}>
+                      <label className="apply-label" htmlFor="apply-expected-ctc">
+                        Expected CTC (in LPA)<span className="apply-required">*</span>
+                      </label>
+                      <input
+                        id="apply-expected-ctc"
+                        type="text"
+                        className={`apply-input${errors.expectedCtc ? ' input-error' : ''}`}
+                        placeholder="Enter your Expected CTC"
+                        value={formData.expectedCtc}
+                        onChange={(e) => handleChange('expectedCtc', e.target.value)}
+                      />
+                      {errors.expectedCtc && <span className="apply-error-text">{errors.expectedCtc}</span>}
+                    </div>
+                  </div>
+
+                  {/* Row 4: Notice Period (30%) + Applying For (70%) in one row */}
+                  <div className="apply-field-row">
+                    <div className="apply-field-group" style={{ flex: '0 0 calc(30% - 7px)' }}>
+                      <label className="apply-label" htmlFor="apply-notice">
+                        Notice Period (in days)<span className="apply-required">*</span>
+                      </label>
+                      <input
+                        id="apply-notice"
+                        type="text"
+                        className={`apply-input${errors.noticePeriod ? ' input-error' : ''}`}
+                        placeholder="e.g. 30 "
+                        value={formData.noticePeriod}
+                        onChange={(e) => handleChange('noticePeriod', e.target.value)}
+                      />
+                      {errors.noticePeriod && <span className="apply-error-text">{errors.noticePeriod}</span>}
+                    </div>
+
+                    <div className="apply-field-group" style={{ flex: '0 0 calc(70% - 7px)' }}>
+                      <label className="apply-label" htmlFor="apply-position">
+                        Applying For <span className="apply-required">*</span>
+                      </label>
+                      <input
+                        id="apply-position"
+                        type="text"
+                        className={`apply-input${errors.applyingFor ? ' input-error' : ''}`}
+                        placeholder="Enter name of Position / Department"
+                        value={formData.applyingFor}
+                        onChange={(e) => handleChange('applyingFor', e.target.value)}
+                      />
+                      {errors.applyingFor && <span className="apply-error-text">{errors.applyingFor}</span>}
+                    </div>
+                  </div>
+
+                  {/* Row 5: Relevant Link (optional) */}
+                  <div className="apply-field-group">
+                    <label className="apply-label" htmlFor="apply-link">
+                      Relevant Link{' '}
+                    </label>
+                    <input
+                      id="apply-link"
+                      type="url"
+                      className="apply-input"
+                      placeholder="Paste LinkedIn, portfolio, GitHub or other relevant link"
+                      value={formData.relevantLink}
+                      onChange={(e) => handleChange('relevantLink', e.target.value)}
+                    />
+                  </div>
+
+                  {/* Row 6: Resume Upload */}
+                  <div className="apply-field-group" style={{ marginBottom: 4 }}>
+                    <div className="apply-resume-label">
+                      Resume <span className="apply-required">*</span>
+                    </div>
+                    <div
+                      className={`apply-dropzone${isDragging ? ' dragging' : ''}${errors.resume ? ' dropzone-error' : ''}`}
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        setIsDragging(true);
+                      }}
+                      onDragLeave={() => setIsDragging(false)}
+                      onDrop={handleDrop}
+                      onClick={() => fileInputRef.current?.click()}
+                      role="button"
+                      tabIndex={0}
+                      aria-label="Upload resume"
+                    >
+                      <svg
+                        className="apply-dropzone-icon"
+                        width="32"
+                        height="32"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="#744FE7"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z" />
+                        <polyline points="16 12 12 8 8 12" />
+                        <line x1="12" y1="8" x2="12" y2="18" />
+                      </svg>
+                      {resumeFile ? (
+                        <p className="apply-file-name">{resumeFile.name}</p>
+                      ) : (
+                        <>
+                          <p className="apply-dropzone-title">Upload your resume</p>
+                          <p className="apply-dropzone-hint">PDF, DOC or DOCX (Max. 4MB)</p>
+                        </>
+                      )}
+                      <button
+                        type="button"
+                        className="apply-browse-btn"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          fileInputRef.current?.click();
+                        }}
+                      >
+                        Browse File
+                      </button>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept=".pdf,.doc,.docx"
+                        style={{ display: 'none' }}
+                        onChange={handleFileChange}
+                      />
+                    </div>
+                    {errors.resume && <span className="apply-error-text">{errors.resume}</span>}
+                  </div>
+                </div>
+
+                {/* Fixed Footer */}
+                <div className="apply-modal-footer">
+                  <button
+                    type="submit"
+                    disabled={isSubmitting || submitted}
+                    className="apply-submit-btn"
+                  >
+                    {isSubmitting ? 'Submitting...' : 'Submit Application'}
+                  </button>
+
+                  <div className="apply-disclaimer">
+                    <svg
+                      width="12"
+                      height="12"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="#737171"
+                      strokeWidth="2.2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      style={{ flexShrink: 0 }}
+                    >
+                      <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                    </svg>
+                    <span>By submitting, you agree to be contacted regarding your application</span>
+                  </div>
+                </div>
+              </form>
             </div>
 
-            <p className="apply-subtitle">
-              Tell us a little about yourself. It only takes a minute.
-            </p>
-          </div>
-
-          {/* Scrollable Body */}
-          <div className="apply-modal-body">
-            {/* Row 1: Full Name + Phone Number */}
-            <div className="apply-field-row">
-              <div className="apply-field-group" style={{ flex: 1 }}>
-                <label className="apply-label" htmlFor="apply-fullname">
-                  Full Name <span className="apply-required">*</span>
-                </label>
-                <input
-                  id="apply-fullname"
-                  type="text"
-                  className={`apply-input${errors.fullName ? ' input-error' : ''}`}
-                  placeholder="Enter your full name"
-                  value={formData.fullName}
-                  onChange={(e) => handleChange('fullName', e.target.value)}
-                />
-                {errors.fullName && <span className="apply-error-text">{errors.fullName}</span>}
-              </div>
-
-              <div className="apply-field-group" style={{ flex: 1 }}>
-                <label className="apply-label" htmlFor="apply-phone">
-                  Phone Number <span className="apply-required">*</span>
-                </label>
-                <CountryPhoneInput
-                  id="apply-phone"
-                  value={formData.phone}
-                  onChange={(nationalNumber, _full, country) => {
-                    setFormData((prev) => ({ ...prev, phone: nationalNumber }));
-                    setSelectedCountry(country.code);
-                    setCountryDialCode(country.dialCode);
-                    if (errors.phone) {
-                      setErrors((prev) => {
-                        const next = { ...prev };
-                        delete next.phone;
-                        return next;
-                      });
-                    }
-                  }}
-                  selectedCountry={selectedCountry}
-                  onCountryChange={(country) => {
-                    setSelectedCountry(country.code);
-                    setCountryDialCode(country.dialCode);
-                  }}
-                  error={errors.phone}
-                  variant="modal"
-                />
-              </div>
-            </div>
-
-            {/* Row 2: Email Address (60%) + Experience (40%) in one row */}
-            <div className="apply-field-row">
-              <div className="apply-field-group" style={{ flex: '0 0 calc(60% - 7px)' }}>
-                <label className="apply-label" htmlFor="apply-email">
-                  Email Address <span className="apply-required">*</span>
-                </label>
-                <input
-                  id="apply-email"
-                  type="email"
-                  className={`apply-input${errors.email ? ' input-error' : ''}`}
-                  placeholder="Enter your email address"
-                  value={formData.email}
-                  onChange={(e) => handleChange('email', e.target.value)}
-                />
-                {errors.email && <span className="apply-error-text">{errors.email}</span>}
-              </div>
-
-              <div className="apply-field-group" style={{ flex: '0 0 calc(40% - 7px)' }}>
-                <label className="apply-label" htmlFor="apply-exp">
-                  Experience <span className="apply-required">*</span>
-                </label>
-                <input
-                  id="apply-exp"
-                  type="text"
-                  className={`apply-input${errors.experience ? ' input-error' : ''}`}
-                  placeholder="Experience"
-                  value={formData.experience}
-                  onChange={(e) => handleChange('experience', e.target.value)}
-                />
-                {errors.experience && <span className="apply-error-text">{errors.experience}</span>}
-              </div>
-            </div>
-
-            {/* Row 3: Current CTC (50%) + Expected CTC (50%) in one row */}
-            <div className="apply-field-row">
-              <div className="apply-field-group" style={{ flex: 1 }}>
-                <label className="apply-label" htmlFor="apply-current-ctc">
-                  Current CTC (in LPA) <span className="apply-required">*</span>
-                </label>
-                <input
-                  id="apply-current-ctc"
-                  type="text"
-                  className={`apply-input${errors.currentCtc ? ' input-error' : ''}`}
-                  placeholder="Enter your Current CTC"
-                  value={formData.currentCtc}
-                  onChange={(e) => handleChange('currentCtc', e.target.value)}
-                />
-                {errors.currentCtc && <span className="apply-error-text">{errors.currentCtc}</span>}
-              </div>
-
-              <div className="apply-field-group" style={{ flex: 1 }}>
-                <label className="apply-label" htmlFor="apply-expected-ctc">
-                  Expected CTC (in LPA)<span className="apply-required">*</span>
-                </label>
-                <input
-                  id="apply-expected-ctc"
-                  type="text"
-                  className={`apply-input${errors.expectedCtc ? ' input-error' : ''}`}
-                  placeholder="Enter your Expected CTC"
-                  value={formData.expectedCtc}
-                  onChange={(e) => handleChange('expectedCtc', e.target.value)}
-                />
-                {errors.expectedCtc && <span className="apply-error-text">{errors.expectedCtc}</span>}
-              </div>
-            </div>
-
-            {/* Row 4: Notice Period (30%) + Applying For (70%) in one row */}
-            <div className="apply-field-row">
-              <div className="apply-field-group" style={{ flex: '0 0 calc(30% - 7px)' }}>
-                <label className="apply-label" htmlFor="apply-notice">
-                  Notice Period (in days)<span className="apply-required">*</span>
-                </label>
-                <input
-                  id="apply-notice"
-                  type="text"
-                  className={`apply-input${errors.noticePeriod ? ' input-error' : ''}`}
-                  placeholder="e.g. 30 "
-                  value={formData.noticePeriod}
-                  onChange={(e) => handleChange('noticePeriod', e.target.value)}
-                />
-                {errors.noticePeriod && <span className="apply-error-text">{errors.noticePeriod}</span>}
-              </div>
-
-              <div className="apply-field-group" style={{ flex: '0 0 calc(70% - 7px)' }}>
-                <label className="apply-label" htmlFor="apply-position">
-                  Applying For <span className="apply-required">*</span>
-                </label>
-                <input
-                  id="apply-position"
-                  type="text"
-                  className={`apply-input${errors.applyingFor ? ' input-error' : ''}`}
-                  placeholder="Enter name of Position / Department"
-                  value={formData.applyingFor}
-                  onChange={(e) => handleChange('applyingFor', e.target.value)}
-                />
-                {errors.applyingFor && <span className="apply-error-text">{errors.applyingFor}</span>}
-              </div>
-            </div>
-
-            {/* Row 5: Relevant Link (optional) */}
-            <div className="apply-field-group">
-              <label className="apply-label" htmlFor="apply-link">
-                Relevant Link{' '}
-                <span style={{ fontWeight: 400, color: '#9086A8', fontSize: '12.5px', marginLeft: '4px' }}>
-                  (optional)
-                </span>
-              </label>
-              <input
-                id="apply-link"
-                type="url"
-                className="apply-input"
-                placeholder="Paste LinkedIn, portfolio, GitHub or other relevant link"
-                value={formData.relevantLink}
-                onChange={(e) => handleChange('relevantLink', e.target.value)}
-              />
-            </div>
-
-            {/* Row 6: Resume Upload */}
-            <div className="apply-field-group" style={{ marginBottom: 4 }}>
-              <div className="apply-resume-label">
-                Resume <span className="apply-required">*</span>
-              </div>
-              <div
-                className={`apply-dropzone${isDragging ? ' dragging' : ''}${errors.resume ? ' dropzone-error' : ''}`}
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  setIsDragging(true);
-                }}
-                onDragLeave={() => setIsDragging(false)}
-                onDrop={handleDrop}
-                onClick={() => fileInputRef.current?.click()}
-                role="button"
-                tabIndex={0}
-                aria-label="Upload resume"
-              >
-                <svg
-                  className="apply-dropzone-icon"
-                  width="32"
-                  height="32"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="#744FE7"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z" />
-                  <polyline points="16 12 12 8 8 12" />
-                  <line x1="12" y1="8" x2="12" y2="18" />
-                </svg>
-                {resumeFile ? (
-                  <p className="apply-file-name">{resumeFile.name}</p>
-                ) : (
-                  <>
-                    <p className="apply-dropzone-title">Upload your resume</p>
-                    <p className="apply-dropzone-hint">PDF, DOC or DOCX (Max. 4MB)</p>
-                  </>
-                )}
+            {/* BACK FACE: Success Screen */}
+            <div className="apply-flip-back">
+              <div className="apply-success-box">
+                {/* Close button */}
                 <button
                   type="button"
-                  className="apply-browse-btn"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    fileInputRef.current?.click();
-                  }}
+                  className="apply-success-close"
+                  aria-label="Close success message"
+                  onClick={handleClose}
                 >
-                  Browse File
-                </button>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".pdf,.doc,.docx"
-                  style={{ display: 'none' }}
-                  onChange={handleFileChange}
-                />
-              </div>
-              {errors.resume && <span className="apply-error-text">{errors.resume}</span>}
-            </div>
-          </div>
-
-          {/* Fixed Footer */}
-          <div className="apply-modal-footer">
-            <button
-              type="submit"
-              disabled={isSubmitting || submitted}
-              className={`apply-submit-btn${submitted ? ' submitted' : ''}`}
-            >
-              {isSubmitting ? (
-                'Submitting...'
-              ) : submitted ? (
-                <>
                   <svg
                     width="18"
                     height="18"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
-                    strokeWidth="2.5"
+                    strokeWidth="2.4"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                </button>
+
+                {/* Animated checkmark ring */}
+                <div className="apply-success-icon-ring" aria-hidden="true">
+                  <svg
+                    width="36"
+                    height="36"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="#ffffff"
+                    strokeWidth="2.6"
                     strokeLinecap="round"
                     strokeLinejoin="round"
                   >
                     <polyline points="20 6 9 17 4 12" />
                   </svg>
-                  Application Sent!
-                </>
-              ) : (
-                'Submit Application'
-              )}
-            </button>
+                </div>
 
-            <div className="apply-disclaimer">
-              <svg
-                width="12"
-                height="12"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="#737171"
-                strokeWidth="2.2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                style={{ flexShrink: 0 }}
-              >
-                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-              </svg>
-              <span>By submitting, you agree to be contacted regarding your application</span>
+                {/* Meaningful Title */}
+                <h3 className="apply-success-title">Thank you for applying!</h3>
+
+                {/* Meaningful Description */}
+                <p className="apply-success-desc">
+                  We&apos;ve received your application and our team will reach out to you shortly.
+                </p>
+              </div>
             </div>
           </div>
-        </form>
+        </div>
       </div>
     </>,
     document.body
