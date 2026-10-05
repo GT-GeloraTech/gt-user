@@ -180,6 +180,7 @@ export default function TermsPage() {
   return (
     <LegalPage
       title="Terms & Conditions"
+      subtitle="Please review these Terms & Conditions carefully. They outline the rights, responsibilities, and legal framework governing the use of Gelora Tech's services."
       leads={[
         "These Terms & Conditions govern access to and use of services provided by Gelora Tech.",
         "By using our services, platforms, applications, APIs, software, or websites, you agree to these Terms.",

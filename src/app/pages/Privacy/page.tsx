@@ -211,6 +211,7 @@ export default function PrivacyPage() {
   return (
     <LegalPage
       title="Privacy Policy"
+      subtitle="Your privacy and data security are strictly confidential. Learn how Gelora Tech and our platforms protect your data, customer feedback, and business information."
       leads={[
         "Welcome to Gelora Tech. We value your privacy and are committed to protecting your information. This Privacy Policy explains how we collect, use, disclose, and safeguard information when you use our services, websites, applications, APIs, software solutions, and related technologies.",
         "By accessing or using our services, you agree to the practices described in this Privacy Policy.",

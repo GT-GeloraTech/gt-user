@@ -57,7 +57,6 @@ export default function ContactPage() {
   const validateForm = () => {
     const errs: Record<string, string> = {};
     if (!formData.firstName.trim()) errs.firstName = "First Name is required.";
-    if (!formData.lastName.trim()) errs.lastName = "Last Name is required.";
     if (!formData.email.trim()) {
       errs.email = "Email Address is required.";
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
@@ -893,7 +892,7 @@ export default function ContactPage() {
                           />
                           {!formData.lastName && (
                             <span className="contact-placeholder-overlay">
-                              Last Name <span className="contact-field-required">*</span>
+                              Last Name
                             </span>
                           )}
                           {fieldErrors.lastName && (

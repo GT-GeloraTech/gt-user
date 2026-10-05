@@ -372,6 +372,15 @@ export default function Header({ activeTab, onTabChange }: HeaderProps) {
     )
     : null;
 
+  const isLegalPage =
+    pathname === "/privacy" ||
+    pathname === "/terms" ||
+    pathname?.startsWith("/privacy") ||
+    pathname?.startsWith("/terms");
+
+  if (isLegalPage) {
+    return null;
+  }
 
   return (
     <>
