@@ -5,7 +5,7 @@ const PHONE_PATTERN = /^[+\d][\d\s-]{6,18}\d$/;
 
 export type ContactInput = {
   firstName: string;
-  lastName: string;
+  lastName: string | null;
   email: string | null;
   phone: string | null;
   service: string | null;
@@ -40,8 +40,8 @@ export function validateContact(body: unknown): {
   if (!firstName || firstName.length > 80) {
     fieldErrors.firstName = "First name is required (max 80 characters).";
   }
-  if (!lastName || lastName.length > 80) {
-    fieldErrors.lastName = "Last name is required (max 80 characters).";
+  if (lastName && lastName.length > 80) {
+    fieldErrors.lastName = "Last name must be 80 characters or fewer.";
   }
   if (!message || message.length > 4000) {
     fieldErrors.message = "Please tell us about your project (max 4000 characters).";
@@ -74,7 +74,7 @@ export function validateContact(body: unknown): {
   return {
     data: {
       firstName,
-      lastName,
+      lastName: lastName || null,
       email: emailRaw || null,
       phone: phoneRaw || null,
       service: serviceRaw || null,

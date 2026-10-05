@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Footer from "@/app/components/Footer";
 
@@ -172,7 +172,7 @@ export default function ProductPage() {
         /* 3D Flip Card Container */
         .flip-card {
           width: 100%;
-          height: 240px;
+          height: 224px;
           perspective: 1200px;
           cursor: pointer;
         }
@@ -220,16 +220,20 @@ export default function ProductPage() {
           width: 100%;
           height: 100%;
           object-fit: cover;
-          object-position: top center;
+          object-position: center;
           display: block;
           transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
-        .flip-card:hover .flip-front-img {
-          transform: scale(1.05);
+        .flip-front-img-brh {
+          object-position: 5% center;
         }
 
-        /* BACK FACE: Flip Details */
+        .flip-card:hover .flip-front-img {
+          transform: scale(1.04);
+        }
+
+        /* BACK FACE: Entire face is a clickable link to the product */
         .flip-card-back {
           background: linear-gradient(135deg, #2D1577 0%, #5227B8 50%, #6E3BD9 100%);
           border: 1px solid rgba(255, 255, 255, 0.15);
@@ -242,6 +246,16 @@ export default function ProductPage() {
           justify-content: center;
           gap: 12px;
           text-align: center;
+          text-decoration: none;
+          cursor: pointer;
+          user-select: none;
+          -webkit-user-select: none;
+          transition: border-color 0.25s ease, box-shadow 0.25s ease;
+        }
+
+        .flip-card-back:hover {
+          border-color: rgba(255, 255, 255, 0.35);
+          box-shadow: 0 20px 54px rgba(116, 79, 231, 0.7);
         }
 
         .flip-back-tag {
@@ -289,16 +303,15 @@ export default function ProductPage() {
           font-weight: 600;
           font-size: 13.5px;
           line-height: 1;
-          cursor: pointer;
-          text-decoration: none;
+          pointer-events: none;
           transition: transform 0.22s ease, box-shadow 0.22s ease;
           box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
           margin-top: 2px;
         }
 
-        .flip-back-btn:hover {
-          transform: translateY(-2px) scale(1.03);
-          box-shadow: 0 8px 22px rgba(0, 0, 0, 0.28);
+        .flip-card-back:hover .flip-back-btn {
+          transform: translateY(-2px) scale(1.04);
+          box-shadow: 0 8px 22px rgba(0, 0, 0, 0.3);
         }
 
         .flip-back-btn-arrow {
@@ -307,7 +320,7 @@ export default function ProductPage() {
           display: inline-block;
         }
 
-        .flip-back-btn:hover .flip-back-btn-arrow {
+        .flip-card-back:hover .flip-back-btn-arrow {
           transform: translate(2px, -2px);
         }
 
@@ -350,6 +363,13 @@ export default function ProductPage() {
         @media (max-width: 1080px) {
           .projects-grid {
             grid-template-columns: repeat(2, 1fr);
+            gap: 28px;
+          }
+          .project-card-item {
+            max-width: 100%;
+          }
+          .flip-card {
+            height: clamp(210px, 25vw, 240px);
           }
         }
 
@@ -375,12 +395,14 @@ export default function ProductPage() {
         @media (max-width: 680px) {
           .projects-grid {
             grid-template-columns: 1fr;
+            gap: 36px;
           }
           .project-card-item {
-            max-width: 100%;
+            max-width: 440px;
+            margin: 0 auto;
           }
           .flip-card {
-            height: 220px;
+            height: clamp(200px, 54vw, 250px);
           }
         }
 
@@ -391,6 +413,18 @@ export default function ProductPage() {
           .product-title {
             font-size: 34px;
             line-height: 40px;
+          }
+          .project-card-item {
+            max-width: 100%;
+          }
+          .flip-card {
+            height: clamp(190px, 52vw, 220px);
+          }
+          .project-card-title {
+            font-size: 20px;
+          }
+          .project-card-desc {
+            font-size: 13.5px;
           }
         }
       `}</style>
@@ -414,7 +448,7 @@ export default function ProductPage() {
       <section className="selected-work-section" aria-label="Selected Projects">
 
 
-        {/* 3-column grid — single card sits at the start (left) */}
+        {/* 3-column grid — cards sit at the start (left) */}
         <div className="projects-grid">
 
           {/* ── Chopdi Project Item ── */}
@@ -433,33 +467,85 @@ export default function ProductPage() {
                   />
                 </div>
 
-                {/* ── BACK FACE: Flip Details ── */}
-                <div className="flip-card-back">
-                  <a
-                    href="https://chopdi.geloratech.com/#home"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flip-back-btn"
-                    aria-label="View Chopdi Details (opens in new tab)"
-                  >
+                {/* ── BACK FACE: Entire face is clickable to redirect ── */}
+                <a
+                  href="https://chopdi.geloratech.com/#home"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flip-card-back"
+                  aria-label="View Chopdi Details (opens in new tab)"
+                  onClick={(e) => (e.currentTarget as HTMLElement).blur()}
+                  onMouseLeave={(e) => (e.currentTarget as HTMLElement).blur()}
+                >
+                  <span className="flip-back-btn">
                     <span>View More Details</span>
                     <span className="flip-back-btn-arrow" aria-hidden="true">↗</span>
-                  </a>
-                </div>
+                  </span>
+                </a>
 
               </div>
             </div>
 
             {/* ── OUTSIDE & BELOW THE CARD: Info Text ── */}
             <div className="project-card-info">
-              <h2 className="project-card-title">Chopdi</h2>
+              <h2 className="project-card-title">Chopdi
+                : <span className="project-card-desc" style={{ fontWeight: 'semi-bold',color: '#d3caf3' }}>
+                  Your Digital Hisaab
+                </span>
+              </h2>
               <p className="project-card-desc">
-                A digital hisaab platform built to manage financial records, loans, EMIs, interest calculations, and payment history.
+                Track loans, interest, payments, and outstanding amounts in one simple app.
               </p>
             </div>
           </div>
-
           {/* ── END Chopdi ── */}
+
+          {/* ── BRH Project Item ── */}
+          <div className="project-card-item">
+            {/* The 3D Flip Card */}
+            <div className="flip-card" role="article" aria-label="BRH — Business Review Helper">
+              <div className="flip-card-inner">
+
+                {/* ── FRONT FACE: Preview Image ── */}
+                <div className="flip-card-front">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src="/asset/BRHImg.png"
+                    alt="BRH application screenshot"
+                    className="flip-front-img flip-front-img-brh"
+                  />
+                </div>
+
+                {/* ── BACK FACE: Entire face is clickable to redirect ── */}
+                <a
+                  href="https://brh.geloratech.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flip-card-back"
+                  aria-label="View BRH Details (opens in new tab)"
+                  onClick={(e) => (e.currentTarget as HTMLElement).blur()}
+                  onMouseLeave={(e) => (e.currentTarget as HTMLElement).blur()}
+                >
+                  <span className="flip-back-btn">
+                    <span>View More Details</span>
+                    <span className="flip-back-btn-arrow" aria-hidden="true">↗</span>
+                  </span>
+                </a>
+
+              </div>
+            </div>
+
+            {/* ── OUTSIDE & BELOW THE CARD: Info Text ── */}
+            <div className="project-card-info">
+              <h2 className="project-card-title">BRH : <span className="project-card-desc" style={{ fontWeight: 'semi-bold', color: '#d3caf3' }}>
+                  Simplify. Manage. Grow.
+                </span></h2>
+              <p className="project-card-desc">
+                A web platform designed to simplify and streamline business operations through a single, easy-to-use solution.
+              </p>
+            </div>
+          </div>
+          {/* ── END BRH ── */}
 
         </div>
       </section>
