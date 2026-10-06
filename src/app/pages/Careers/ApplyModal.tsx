@@ -1027,11 +1027,12 @@ export default function ApplyModal({ isOpen, onClose, defaultRole = '' }: ApplyM
                     <input
                       id="apply-link"
                       type="url"
-                      className="apply-input"
+                      className={`apply-input${errors.relevantLink ? ' input-error' : ''}`}
                       placeholder="Paste LinkedIn, portfolio, GitHub or other relevant link"
                       value={formData.relevantLink}
                       onChange={(e) => handleChange('relevantLink', e.target.value)}
                     />
+                    {errors.relevantLink && <span className="apply-error-text">{errors.relevantLink}</span>}
                   </div>
 
                   {/* Row 6: Resume Upload */}

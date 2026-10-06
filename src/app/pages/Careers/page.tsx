@@ -4,7 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import Footer from "@/app/components/Footer";
 import ApplyModal from "./ApplyModal";
-import FullStackDeveloperPage from "./FullStackDeveloper";
+import FullStackDeveloperPage, { UI_UX_DEVELOPER_ROLE } from "./FullStackDeveloper";
 
 interface TeamMember {
   name: string;
@@ -82,38 +82,56 @@ interface Opportunity {
   title: string;
   department: string;
   type: string;
+  experience: string;
 }
 
 const OPPORTUNITIES_DATA: Opportunity[] = [
   {
     id: "01",
     num: "01",
-    title: "Full Stack Developer",
-    department: "Development",
-    type: "Full-time",
+    title: "UI/UX Internship",
+    department: "Design",
+    type: "Remote",
+    experience: "0–1 year",
   },
+];
+
+/*
+const OTHER_OPPORTUNITIES: Opportunity[] = [
   {
     id: "02",
     num: "02",
-    title: "UI/UX Designer",
-    department: "Design",
+    title: "Full Stack Developer",
+    department: "Development",
     type: "Full-time",
+    experience: "",
   },
   {
     id: "03",
     num: "03",
-    title: "Content Creator / Social Media Executive",
-    department: "Marketing",
+    title: "UI/UX Designer",
+    department: "Design",
     type: "Full-time",
+    experience: "",
   },
   {
     id: "04",
     num: "04",
+    title: "Content Creator / Social Media Executive",
+    department: "Marketing",
+    type: "Full-time",
+    experience: "",
+  },
+  {
+    id: "05",
+    num: "05",
     title: "Internships",
     department: "Internships",
     type: "Internships",
+    experience: "",
   },
 ];
+*/
 
 export default function CareersPage() {
   const [activeDept, setActiveDept] = useState("All departments");
@@ -125,11 +143,23 @@ export default function CareersPage() {
   const closeModal = () => setIsModalOpen(false);
 
   const handleOpportunityClick = (job: Opportunity) => {
-    if (job.title.toLowerCase().includes("full stack")) {
-      setSelectedJob("full-stack");
+    if (job.title === "UI/UX Internship") {
+      setSelectedJob("ui-ux");
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
   };
+
+  if (selectedJob === "ui-ux") {
+    return (
+      <FullStackDeveloperPage
+        role={UI_UX_DEVELOPER_ROLE}
+        onBack={() => {
+          setSelectedJob(null);
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        }}
+      />
+    );
+  }
 
   if (selectedJob === "full-stack") {
     return (
@@ -1388,8 +1418,6 @@ export default function CareersPage() {
             Find where <span className="opportunities-title-italic">you fit.</span>
           </h2>
 
-          <p className="opportunities-empty">No openings available at the moment.</p>
-
           {/*
           Filter Tabs
           <div className="opportunities-tabs-row" role="tablist">
@@ -1409,12 +1437,10 @@ export default function CareersPage() {
               );
             })}
           </div>
+          */}
 
-          List of Opportunities
           <div className="opportunities-list">
-            {filteredOpportunities.map((job) => {
-              const isFullStack = job.title.toLowerCase().includes("full stack");
-              return (
+            {filteredOpportunities.map((job) => (
                 <div
                   key={job.id}
                   className="opportunity-card"
@@ -1436,6 +1462,7 @@ export default function CareersPage() {
                       <div className="opportunity-tags">
                         <span>{job.department}</span>
                         <span>{job.type}</span>
+                        <span>{job.experience}</span>
                       </div>
                     </div>
                   </div>
@@ -1455,10 +1482,8 @@ export default function CareersPage() {
                     </svg>
                   </div>
                 </div>
-              );
-            })}
+            ))}
           </div>
-          */}
         </div>
       </section>
 

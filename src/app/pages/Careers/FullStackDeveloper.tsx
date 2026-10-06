@@ -3,11 +3,90 @@
 import { useState } from "react";
 import ApplyModal from "./ApplyModal";
 
-interface FullStackDeveloperProps {
-  onBack?: () => void;
+interface RoleFact {
+  label: string;
+  value: string;
 }
 
-export default function FullStackDeveloperPage({ onBack }: FullStackDeveloperProps = {}) {
+interface RoleDetail {
+  title: string;
+  tags: string[];
+  hero: string;
+  facts?: RoleFact[];
+  about: string[];
+  duties: string[];
+  lookingFor: string[];
+  skills: string[];
+  perks: string[];
+}
+
+const FULL_STACK_ROLE: RoleDetail = {
+  title: "Full Stack Developer",
+  tags: ["Development", "Full-time"],
+  hero: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+  about: [
+    "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
+    "Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident.",
+  ],
+  duties: [
+    "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod.",
+    "Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris.",
+    "Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore.",
+    "Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia.",
+  ],
+  lookingFor: [
+    "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod.",
+    "Experience with relevant tools and technologies in similar role.",
+    "Strong problem-solving skills and attention to detail.",
+    "Excellent communication and teamwork abilities.",
+  ],
+  skills: ["Lorem Ipsum", "Lorem Ipsum", "Lorem Ipsum", "Lorem Ipsum", "Lorem Ipsum", "Lorem Ipsum", "Lorem Ipsum"],
+  perks: [
+    "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+    "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+    "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+  ],
+};
+
+export const UI_UX_DEVELOPER_ROLE: RoleDetail = {
+  title: "UI/UX Internship",
+  tags: [],
+  hero: "",
+  facts: [
+    { label: "Experience", value: "0–1 year" },
+    { label: "Positions", value: "1" },
+    { label: "Location", value: "Remote" },
+  ],
+  about: [
+    "This is a remote UI/UX internship at Gelora Tech for someone early in design, with up to one year of experience or strong study projects. You will work with the design team on the screens people use in the product.",
+    "The work is hands-on. You will shape user flows, update layouts from feedback, prepare screens for developer handoff, and review the product screens that are already live.",
+  ],
+  duties: [
+    "Design user flows for web and mobile screens.",
+    "Update layouts from feedback.",
+    "Prepare files for developer handoff.",
+    "Review existing screens.",
+  ],
+  lookingFor: [
+    "Early UI/UX experience, or strong study projects.",
+    "A small portfolio of interface work.",
+    "Comfort with Figma.",
+    "Clear communication while working remotely.",
+  ],
+  skills: ["Figma", "Wireframes", "User flows", "Visual design", "Prototyping", "Responsive layout", "Handoff"],
+  perks: [
+    "Remote work.",
+    "Guidance from the design team.",
+    "Real product work.",
+  ],
+};
+
+interface FullStackDeveloperProps {
+  onBack?: () => void;
+  role?: RoleDetail;
+}
+
+export default function FullStackDeveloperPage({ onBack, role = FULL_STACK_ROLE }: FullStackDeveloperProps = {}) {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   return (
@@ -102,6 +181,36 @@ export default function FullStackDeveloperPage({ onBack }: FullStackDeveloperPro
           white-space: nowrap;
         }
 
+        .fsd-facts {
+          display: flex;
+          flex-wrap: wrap;
+          align-items: center;
+          gap: 10px 0;
+          margin: 0 0 28px;
+        }
+        .fsd-fact {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          font-family: 'Inter', sans-serif;
+          font-size: 15px;
+          line-height: 1.4;
+          color: #3A3555;
+        }
+        .fsd-fact svg {
+          flex-shrink: 0;
+          color: #744FE7;
+        }
+        .fsd-fact strong {
+          font-weight: 600;
+          color: #744FE7;
+        }
+        .fsd-fact-divider {
+          width: 1px;
+          height: 16px;
+          margin: 0 16px;
+          background: rgba(116, 79, 231, 0.28);
+        }
         .fsd-tags {
           display: flex;
           flex-wrap: wrap;
@@ -428,6 +537,14 @@ export default function FullStackDeveloperPage({ onBack }: FullStackDeveloperPro
             width: 100%;
             justify-content: center;
           }
+          .fsd-facts {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 12px;
+          }
+          .fsd-fact-divider {
+            display: none;
+          }
           .fsd-chips {
             gap: 10px;
           }
@@ -470,14 +587,48 @@ export default function FullStackDeveloperPage({ onBack }: FullStackDeveloperPro
               <span className="fsd-badge-dot" />
               CURRENT OPPORTUNITY
             </div>
-            <h1 className="fsd-title">Full Stack Developer</h1>
-            <div className="fsd-tags">
-              <span className="fsd-tag">Development</span>
-              <span className="fsd-tag">Full-time</span>
-            </div>
-            <p className="fsd-hero-desc">
-              Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
-            </p>
+            <h1 className="fsd-title">{role.title}</h1>
+            {role.facts ? (
+              <div className="fsd-facts">
+                {role.facts.map((fact, index) => (
+                  <span key={fact.label} style={{ display: "contents" }}>
+                    {index > 0 ? <span className="fsd-fact-divider" aria-hidden="true" /> : null}
+                    <span className="fsd-fact">
+                      {fact.label === "Experience" ? (
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <rect x="2" y="7" width="20" height="14" rx="2" />
+                          <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2" />
+                        </svg>
+                      ) : null}
+                      {fact.label === "Positions" ? (
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                          <circle cx="9" cy="7" r="4" />
+                          <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+                          <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                        </svg>
+                      ) : null}
+                      {fact.label === "Location" ? (
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0" />
+                          <circle cx="12" cy="10" r="3" />
+                        </svg>
+                      ) : null}
+                      <span><strong>{fact.label}:</strong> {fact.value}</span>
+                    </span>
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <>
+                <div className="fsd-tags">
+                  {role.tags.map((tag) => (
+                    <span key={tag} className="fsd-tag">{tag}</span>
+                  ))}
+                </div>
+                <p className="fsd-hero-desc">{role.hero}</p>
+              </>
+            )}
             <button type="button" className="fsd-apply-hero" onClick={() => setIsModalOpen(true)}>
               Apply for this role
               <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
@@ -589,12 +740,9 @@ export default function FullStackDeveloperPage({ onBack }: FullStackDeveloperPro
               <h2 id="fsd-about" className="fsd-row-title">About the Role</h2>
             </div>
             <div className="fsd-row-right">
-              <p className="fsd-p">
-                Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
-              </p>
-              <p className="fsd-p">
-                Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident.
-              </p>
+              {role.about.map((paragraph) => (
+                <p key={paragraph} className="fsd-p">{paragraph}</p>
+              ))}
             </div>
           </section>
 
@@ -611,14 +759,9 @@ export default function FullStackDeveloperPage({ onBack }: FullStackDeveloperPro
             </div>
             <div className="fsd-row-right">
               <div className="fsd-list">
-                {[
-                  "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod.",
-                  "Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris.",
-                  "Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore.",
-                  "Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia.",
-                ].map((item, i) => (
-                  <div key={i} className="fsd-list-item">
-                    <span className="fsd-list-num">{String(i + 1).padStart(2, "0")} — </span>
+                {role.duties.map((item, i) => (
+                  <div key={item} className="fsd-list-item">
+                    <span className="fsd-list-num">{String(i + 1).padStart(2, "0")} —</span>
                     <span>{item}</span>
                   </div>
                 ))}
@@ -641,14 +784,9 @@ export default function FullStackDeveloperPage({ onBack }: FullStackDeveloperPro
             </div>
             <div className="fsd-row-right">
               <div className="fsd-list">
-                {[
-                  "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod.",
-                  "Experience with relevant tools and technologies in similar role.",
-                  "Strong problem-solving skills and attention to detail.",
-                  "Excellent communication and teamwork abilities.",
-                ].map((item, i) => (
-                  <div key={i} className="fsd-list-item">
-                    <span className="fsd-list-num">{String(i + 1).padStart(2, "0")} — </span>
+                {role.lookingFor.map((item, i) => (
+                  <div key={item} className="fsd-list-item">
+                    <span className="fsd-list-num">{String(i + 1).padStart(2, "0")} —</span>
                     <span>{item}</span>
                   </div>
                 ))}
@@ -671,16 +809,8 @@ export default function FullStackDeveloperPage({ onBack }: FullStackDeveloperPro
             </div>
             <div className="fsd-row-right">
               <div className="fsd-chips">
-                {[
-                  "Lorem Ipsum",
-                  "Lorem Ipsum",
-                  "Lorem Ipsum",
-                  "Lorem Ipsum",
-                  "Lorem Ipsum",
-                  "Lorem Ipsum",
-                  "Lorem Ipsum",
-                ].map((skill, index) => (
-                  <span key={index} className="fsd-chip">
+                {role.skills.map((skill) => (
+                  <span key={skill} className="fsd-chip">
                     {skill}
                   </span>
                 ))}
@@ -703,13 +833,9 @@ export default function FullStackDeveloperPage({ onBack }: FullStackDeveloperPro
             </div>
             <div className="fsd-row-right">
               <div className="fsd-perks">
-                {[
-                  "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
-                  "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
-                  "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
-                ].map((text, i) => (
-                  <div key={i} className="fsd-perk">
-                    <span className="fsd-perk-num">01</span>
+                {role.perks.map((text, i) => (
+                  <div key={text} className="fsd-perk">
+                    <span className="fsd-perk-num">{String(i + 1).padStart(2, "0")}</span>
                     <p className="fsd-perk-text">{text}</p>
                   </div>
                 ))}
@@ -740,7 +866,7 @@ export default function FullStackDeveloperPage({ onBack }: FullStackDeveloperPro
       <ApplyModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        defaultRole="Full Stack Developer"
+        defaultRole={role.title}
       />
     </main>
   );
